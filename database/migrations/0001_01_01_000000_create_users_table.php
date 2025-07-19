@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('password');
             $table->string('confirm_password');
             $table->enum('role', ['admin', 'user', 'master']);
+            $table->string('status')->default('active');
             
             $table->timestamps();
         });

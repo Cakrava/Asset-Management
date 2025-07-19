@@ -50,6 +50,7 @@ class TransactionController extends Controller
         $users = User::with('profile')
             ->whereHas('profile')
             ->where('role', 'user')
+            ->where('status','active')
             ->get();
     
         // Baca file token link dari storage/app/temporary_url.json

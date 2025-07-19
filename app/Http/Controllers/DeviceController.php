@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Device;
+use App\Models\StoredDevice;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Session;
@@ -11,7 +12,10 @@ class DeviceController extends Controller
 {
     public function index()
     {
-        $devices = Device::orderBy('created_at', 'desc')->get();
+        $devices = Device::whereNotIn('status', ['deleted', 'duplicate'])
+    ->orderBy('created_at', 'desc')
+    ->get();
+
 
 
         $deviceTypeNames = [
@@ -60,10 +64,12 @@ class DeviceController extends Controller
         ];
 
 
-        $duplicates = Device::selectRaw('LOWER(brand) as brand, LOWER(model) as model, COUNT(*) as total, GROUP_CONCAT(id) as device_ids')
-            ->groupByRaw('LOWER(brand), LOWER(model)')
-            ->having('total', '>', 1)
-            ->get();
+        $duplicates = Device::whereNotIn('status', ['deleted', 'duplicate'])
+        ->selectRaw('LOWER(brand) as brand, LOWER(model) as model, COUNT(*) as total, GROUP_CONCAT(id) as device_ids')
+        ->groupByRaw('LOWER(brand), LOWER(model)')
+        ->having('total', '>', 1)
+        ->get();
+    
 
         if ($duplicates->isNotEmpty()) {
             $warningMessage = "<div style='position:relative;'>"; // Container relatif untuk positioning button
@@ -99,15 +105,21 @@ class DeviceController extends Controller
     public function bulkDestroyFromDuplicates(Request $request)
     {
         $deviceIds = $request->input('ids');
-
+    
         if (is_array($deviceIds) && !empty($deviceIds)) {
-            $jumlahDihapus = Device::whereIn('id', $deviceIds)->delete();
-            Session::flash('success', $jumlahDihapus . ' row data berhasil dihapus!');
-            return response()->json(['message' => 'Berhasil menghapus ' . $jumlahDihapus . ' perangkat duplikat!']);
+            $jumlahDitandai = Device::whereIn('id', $deviceIds)->update([
+                'status' => 'duplicate',
+                'note' => 'ditandai sebagai duplikat otomatis',
+                'updated_at' => now(), // biar ketahuan kapan ditandai
+            ]);
+    
+            Session::flash('success', $jumlahDitandai . ' perangkat ditandai sebagai duplikat!');
+            return response()->json(['message' => 'Berhasil menandai ' . $jumlahDitandai . ' perangkat duplikat sebagai "deleted".']);
         } else {
             return response()->json(['error' => 'Tidak ada perangkat duplikat yang dipilih!']);
         }
     }
+    
     public function store(Request $request)
     {
         $validatedData = $request->validate([
@@ -137,27 +149,61 @@ class DeviceController extends Controller
         return response()->json(['message' => 'Perangkat berhasil diupdate.']);
     }
 
-    public function destroy($id)
-    {
-        $device = Device::findOrFail($id);
-        $device->delete();
-
-        return Redirect::back()->with('success', 'Berhasil menghapus data ' . $device->brand . '!');
-    }
-
+  
     public function bulkDestroy(Request $request)
     {
         $deviceIds = $request->input('ids');
-
-        if (is_array($deviceIds) && !empty($deviceIds)) {
-            $jumlahDihapus = Device::whereIn('id', $deviceIds)->delete();
-
-            Session::flash('success', $jumlahDihapus . ' row data berhasil dihapus!');
-            return response()->json(['message' => 'Berhasil menghapus data ' . $jumlahDihapus . ' perangkat!']);
-        } else {
-            return response()->json(['error' => 'Tidak ada row terpilih!']);
+    
+        if (!is_array($deviceIds) || empty($deviceIds)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak ada perangkat terpilih.'
+            ], 400);
         }
+    
+        // Cek apakah ada device yang masih dipakai di stored_devices
+        $usedDevice = StoredDevice::whereIn('device_id', $deviceIds)->pluck('device_id')->toArray();
+    
+        if (!empty($usedDevice)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Beberapa perangkat masih digunakan dan tidak dapat dihapus.',
+                'used_ids' => $usedDevice
+            ], 400);
+        }
+    
+        $jumlahDihapus = Device::whereIn('id', $deviceIds)->update(['status' => 'deleted']);
+    
+        return response()->json([
+            'success' => true,
+            'message' => "$jumlahDihapus perangkat berhasil disembunyikan."
+        ]);
     }
+    
+    public function destroy($id)
+    {
+        $device = Device::findOrFail($id);
+    
+        // Cek apakah device ini masih digunakan di stored_devices
+        $isUsed = StoredDevice::where('device_id', $device->id)->exists();
+    
+        if ($isUsed) {
+            // Kalau masih dipakai, kirim respon error JSON
+            return response()->json([
+                'success' => false,
+                'message' => 'Perangkat ini masih digunakan dan tidak bisa dihapus.'
+            ], 400);
+        }
+    
+        $device->status = 'deleted';
+        $device->save();
+    
+        return response()->json([
+            'success' => true,
+            'message' => 'Perangkat berhasil disembunyikan.'
+        ]);
+    }
+    
 
 
     public function getDeviceData($id)

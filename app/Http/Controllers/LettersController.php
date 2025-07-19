@@ -30,6 +30,7 @@ class LettersController extends Controller
         // Anda bisa filter berdasarkan role jika perlu, misal ->where('role', 'client')
         $clients = User::with('profile')
             ->where('role', 'user')
+            ->where('status', 'active')
             ->whereColumn('created_at', '!=', 'updated_at') // artinya: data sudah pernah di-update
             ->orderBy('id')
             ->get();

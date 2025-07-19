@@ -17,6 +17,7 @@ return new class extends Migration
             $table->integer('stock');
             $table->integer('previous_stock')->nullable();
             $table->string('condition'); // For example: "Good", "Damaged"
+            $table->string('status',30)->default('active'); // For example: "Good", "Damaged"
             $table->timestamps();
             $table->foreign('device_id')->references('id')->on('devices')->onDelete('cascade');
         });

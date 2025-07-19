@@ -262,12 +262,22 @@
                                 });
                             },
                             error: function(xhr) {
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Gagal!',
-                                    text: 'Terjadi kesalahan saat menghapus data.'
-                                });
+                                if (xhr.status === 400 && xhr.responseJSON && xhr.responseJSON.message) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Gagal!',
+            text: xhr.responseJSON.message
+        });
+    } else {
+        Swal.fire({
+            icon: 'error',
+            title: 'Gagal!',
+            text: 'Terjadi kesalahan saat menghapus data.'
+        });
+    }
                             }
+                       
+                       
                         });
                     }
                 });
@@ -302,7 +312,19 @@
                                 }).then(() => window.location.reload());
                             },
                             error: function (xhr) {
-                                Swal.fire('Gagal!', 'Terjadi kesalahan saat menghapus data.', 'error');
+                                if (xhr.status === 400 && xhr.responseJSON && xhr.responseJSON.message) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Gagal!',
+            text: xhr.responseJSON.message
+        });
+    } else {
+        Swal.fire({
+            icon: 'error',
+            title: 'Gagal!',
+            text: 'Terjadi kesalahan saat menghapus data.'
+        });
+    }
                             }
                         });
                     }

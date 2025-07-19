@@ -194,19 +194,47 @@
             </div>
         </div>
     </div>
-
     <div class="modal fade" id="restockModal" tabindex="-1" aria-labelledby="restockModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header"><h5 class="modal-title" id="restockModalLabel">Restock Device</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
-                <div class="modal-body">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow-lg border-0">
+                <div class="modal-header bg-light border-bottom-0">
+                    <h5 class="modal-title" id="restockModalLabel">
+                        <i class="fas fa-box-open me-2 text-primary"></i>Restock Perangkat
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
                     <form id="restockForm" action="{{ route('panel.stored-device.update') }}" method="POST">
-                        @csrf @method('POST')
+                        @csrf
+                        @method('POST')
                         <input type="hidden" name="stored_id" id="stored_id">
-                        <div class="mb-3"><label for="stock" class="form-label">Stock</label><input type="number" class="form-control" id="stock" name="stock" value="1" min="1"></div>
+    
+                        <div class="mb-4">
+                            <label for="stock" class="form-label text-muted">Stok Saat Ini</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="fas fa-cubes"></i></span>
+                                <input type="number" readonly class="form-control" id="stock" name="stock" value="1">
+                            </div>
+                        </div>
+    
+                        <div class="mb-3">
+                            <label for="newstock" class="form-label fw-bold">Tambahkan Stok Baru</label>
+                            <div class="input-group">
+                                 <span class="input-group-text bg-light"><i class="fas fa-plus-circle"></i></span>
+                                <input type="number" class="form-control" id="newstock" name="newstock" value="1" min="1" placeholder="Masukkan jumlah stok...">
+                            </div>
+                            <div class="form-text">
+                                Jumlah ini akan ditambahkan ke stok saat ini.
+                            </div>
+                        </div>
                     </form>
                 </div>
-                <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="saveRestockBtn">Save</button></div>
+                <div class="modal-footer border-top-0 bg-light">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-primary" id="saveRestockBtn">
+                        <i class="fas fa-save me-1"></i> Simpan Perubahan
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -274,56 +302,108 @@
                 });
             });
 
-            // [MODIFIKASI] Event untuk tombol "Delete" per baris
-            $('.btn-delete-stored-device').on('click', function (e) {
-                e.preventDefault();
-                var storedDeviceId = $(this).data('stored-device-id');
-                var form = $('.form-delete-stored-device[data-stored-device-id="' + storedDeviceId + '"]');
+           
 
-                Swal.fire({
-                    title: 'Anda Yakin?',
-                    html: "<p>Data perangkat ini akan dihapus permanen.</p><p><b>Peringatan:</b> Tindakan ini sangat tidak direkomendasikan.</p>",
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#d33',
-                    cancelButtonColor: '#3085d6',
-                    confirmButtonText: 'Ya, Hapus!',
-                    cancelButtonText: 'Batal'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        form.submit();
-                    }
-                });
+            function handleAjaxError(xhr) {
+        // Ini adalah blok yang Anda sediakan, yang sudah sempurna.
+        if (xhr.status === 400 && xhr.responseJSON && xhr.responseJSON.message) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Gagal!',
+                html: xhr.responseJSON.message // Menggunakan 'html' agar bisa menampilkan info stok dengan lebih baik
             });
-
-            // [MODIFIKASI] Event untuk tombol "Bulk Delete"
-            $('#btn-bulk-delete').on('click', function () {
-                var selectedIds = $('.stored-device-checkbox:checked').map(function() { return $(this).val(); }).get();
-                if (selectedIds.length === 0) return;
-
-                Swal.fire({
-                    title: `Hapus ${selectedIds.length} Perangkat?`,
-                    html: "<p>Semua perangkat yang dipilih akan dihapus permanen.</p><p><b>Peringatan:</b> Tindakan ini sangat tidak direkomendasikan.</p>",
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#d33',
-                    cancelButtonColor: '#3085d6',
-                    confirmButtonText: 'Ya, Hapus Semua!',
-                    cancelButtonText: 'Batal'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        $.ajax({
-                            url: '{{ route('panel.stored-device.bulkDestroy') }}', type: 'POST',
-                            data: { _token: '{{ csrf_token() }}', ids: selectedIds },
-                            success: function () { window.location.reload(); },
-                            error: function (xhr) {
-                                console.error('Error during bulk delete:', xhr);
-                                Swal.fire('Gagal!', 'Terjadi kesalahan saat menghapus data.', 'error');
-                            }
-                        });
-                    }
-                });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Oops...',
+                text: 'Terjadi kesalahan pada server. Silakan coba lagi.'
             });
+        }
+    }
+
+    // Fungsi untuk menangani sukses AJAX secara konsisten
+    function handleAjaxSuccess(response) {
+        Swal.fire({
+            title: 'Berhasil!',
+            text: response.message, // Menggunakan pesan dari backend
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false
+        }).then(() => {
+            window.location.reload(); // Muat ulang halaman setelah sukses
+        });
+    }
+
+    // [MODIFIKASI] Event untuk tombol "Delete" per baris (sekarang menggunakan AJAX)
+    $('.btn-delete-stored-device').on('click', function (e) {
+        e.preventDefault();
+        var storedDeviceId = $(this).data('stored-device-id');
+        var form = $('.form-delete-stored-device[data-stored-device-id="' + storedDeviceId + '"]');
+
+        Swal.fire({
+            title: 'Anda Yakin?',
+            html: "<p>Perangkat ini akan ditandai untuk dihapus.</p>" +
+                  "<p><b>Catatan:</b> Tindakan ini hanya dapat dilakukan jika stok perangkat adalah 0.</p>",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Ya, Tandai Hapus!',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Mengganti form.submit() dengan $.ajax()
+                $.ajax({
+                    url: form.attr('action'),
+                    type: 'POST', // Form akan mengirimkan _method: 'DELETE'
+                    data: form.serialize(),
+                    success: handleAjaxSuccess, // Menggunakan fungsi handler sukses
+                    error: handleAjaxError     // Menggunakan fungsi handler error
+                });
+            }
+        });
+    });
+
+    // [MODIFIKASI] Event untuk tombol "Bulk Delete" (dengan handler yang disempurnakan)
+    $('#btn-bulk-delete').on('click', function () {
+        var selectedIds = $('.stored-device-checkbox:checked').map(function() { return $(this).val(); }).get();
+        
+        if (selectedIds.length === 0) {
+            Swal.fire('Peringatan', 'Pilih setidaknya satu perangkat untuk dihapus.', 'info');
+            return;
+        }
+
+        Swal.fire({
+            title: `Tandai ${selectedIds.length} Perangkat untuk Dihapus?`,
+            html: "<p>Semua perangkat yang dipilih akan ditandai untuk dihapus.</p>" +
+                  "<p><b>Catatan:</b> Operasi akan gagal jika salah satu perangkat yang dipilih masih memiliki stok.</p>",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Ya, Tandai Semua!',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '{{ route('panel.stored-device.bulkDestroy') }}',
+                    type: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        ids: selectedIds
+                    },
+                    success: handleAjaxSuccess, // Menggunakan fungsi handler sukses
+                    error: handleAjaxError     // Menggunakan fungsi handler error
+                });
+            }
+        });
+    });
+
+
+
+
+
+
             
             // --- Logika yang tidak berubah ---
             $('#saveStoredDeviceBtn').on('click', function (e) {
@@ -337,13 +417,50 @@
             });
 
             function submitRestockForm() {
-                var form = $('#restockForm');
-                $.ajax({
-                    url: form.attr('action'), type: 'POST', data: form.serialize(),
-                    success: function () { $('#restockModal').modal('hide'); window.location.reload(); },
-                    error: function (xhr) { alert(xhr.responseJSON?.message || 'Error saving data.'); }
-                });
-            }
+    var form = $('#restockForm');
+    var submitButton = form.find('button[type="submit"]'); // Dapatkan tombol submit
+
+    $.ajax({
+        url: form.attr('action'),
+        type: 'POST',
+        data: form.serialize(),
+        beforeSend: function() {
+            // Opsional: Nonaktifkan tombol saat proses AJAX berlangsung untuk mencegah klik ganda
+            submitButton.prop('disabled', true).text('Menyimpan...');
+        },
+        success: function (response) {
+            // Sembunyikan modal terlebih dahulu
+            $('#restockModal').modal('hide');
+
+            // Tampilkan SweetAlert dengan pesan dari backend
+            Swal.fire({
+                title: 'Berhasil!',
+                text: response.message, // <- Mengambil pesan dari respons JSON
+                icon: 'success',
+                timer: 2500, // <- Tampilkan selama 2.5 detik
+                showConfirmButton: false
+            }).then(() => {
+                // Setelah SweetAlert selesai (baik karena timer atau ditutup), reload halaman
+                window.location.reload();
+            });
+        },
+        error: function (xhr) {
+            // Sembunyikan modal juga jika terjadi error
+             $('#restockModal').modal('hide');
+             
+            // Tampilkan pesan error dengan SweetAlert untuk konsistensi
+            Swal.fire({
+                title: 'Gagal!',
+                text: xhr.responseJSON?.message || 'Terjadi kesalahan saat menyimpan data.',
+                icon: 'error'
+            });
+        },
+        complete: function() {
+            // Selalu aktifkan kembali tombol setelah AJAX selesai (baik sukses maupun gagal)
+            submitButton.prop('disabled', false).text('Simpan Perubahan');
+        }
+    });
+}
             $('#saveRestockBtn').on('click', submitRestockForm);
             $('#restockModal #stock').on('keypress', function (e) { if (e.which === 13) { e.preventDefault(); submitRestockForm(); } });
 

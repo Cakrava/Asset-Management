@@ -372,8 +372,19 @@
                             });
                         },
                         error: function(xhr) {
-                            console.error('Error deleting data:', xhr);
-                            Swal.fire('Gagal!', 'Terjadi kesalahan saat menghapus data.', 'error');
+                            if (xhr.status === 400 && xhr.responseJSON && xhr.responseJSON.message) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Gagal!',
+            text: xhr.responseJSON.message
+        });
+    } else {
+        Swal.fire({
+            icon: 'error',
+            title: 'Gagal!',
+            text: 'Terjadi kesalahan saat menghapus data.'
+        });
+    }
                         }
                     });
                 }
@@ -440,8 +451,19 @@
                                 });
                             },
                             error: function (xhr) {
-                                console.error('Error during bulk delete:', xhr);
-                                Swal.fire('Gagal!', 'Terjadi kesalahan saat menghapus data.', 'error');
+                                if (xhr.status === 400 && xhr.responseJSON && xhr.responseJSON.message) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Gagal!',
+            text: xhr.responseJSON.message
+        });
+    } else {
+        Swal.fire({
+            icon: 'error',
+            title: 'Gagal!',
+            text: 'Terjadi kesalahan saat menghapus data.'
+        });
+    }
                             }
                         });
                     }

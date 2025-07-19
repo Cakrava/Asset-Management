@@ -303,40 +303,42 @@ class UserController extends Controller
         if (Auth::user()->id == $user->id) {
             return back()->with('error', 'You cannot delete your own account from manage account. Please use delete my account feature.');
         }
-
-        $user->delete();
+    
+        $user->status = 'deleted';
+        $user->save();
+    
         return back()->with('success', 'User deleted successfully.');
     }
     public function destroyMyAccount(Request $request)
     {
         $user = Auth::user();
-
+    
         $validator = Validator::make($request->all(), [
             'password' => 'required',
             'confirmation' => 'required|same:confirmation_text',
             'confirmation_text' => 'required|in:delete-account-' . $user->email,
         ], [
             'confirmation.same' => 'Teks konfirmasi tidak sama',
-            'confirmation_text.in' => 'Teks konfirmasi haris terisi.',
+            'confirmation_text.in' => 'Teks konfirmasi harus terisi.',
         ]);
-
+    
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput();
         }
-
+    
         if (!Hash::check($request->password, $user->password)) {
             return back()->withErrors(['password' => 'Incorrect password.'])->withInput();
         }
-
-
-        $user->delete();
+    
+        $user->status = 'deleted';
+        $user->save();
+    
         Auth::logout();
-
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-
+    
         return redirect()->route('auth.login')->with('success', 'Your account has been deleted.');
     }
-
+        
 
 }

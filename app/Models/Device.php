@@ -10,6 +10,7 @@ class Device extends Model
     protected $fillable = [
         'brand',
         'model',
-        'type'
+        'type',
+        'status',
     ];
 }
