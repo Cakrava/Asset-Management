@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Laporan {{ $reportData['title'] ?? 'Umum' }}</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <style>
+        /* General body styling for PDF */
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            font-size: 10pt; /* Standard font size for print */
+            box-sizing: border-box;
+            background-color: #fff;
+        }
+
+        .document-page {
+            width: 100%; /* Max width, paper size is set by DomPDF */
+            padding: 25mm; /* Standard print margin */
+            box-sizing: border-box;
+            page-break-after: always; /* Ensure each report section starts on a new page */
+        }
+        .document-page:last-child {
+            page-break-after: avoid; /* No break after the last section */
+        }
+
+        /* Header Styles */
+        .report-page-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #333;
+        }
+        .report-page-header .logo {
+            width: 70px; /* Adjust size as needed for PDF */
+            height: auto;
+            margin-right: 20px;
+            vertical-align: middle; /* Align image vertically */
+        }
+        .report-page-header .header-text {
+            flex-grow: 1;
+            text-align: center;
+        }
+        .report-page-header .header-text h3 {
+            margin: 0;
+            font-size: 1.2em;
+            color: #333;
+        }
+        .report-page-header .header-text p {
+            margin: 0;
+            font-size: 0.8em;
+            color: #555;
+        }
+        .report-main-title {
+            text-align: center;
+            font-size: 1.4em;
+            font-weight: bold;
+            margin-top: 20px;
+            margin-bottom: 5px;
+            color: #0d6efd; /* Bootstrap primary blue */
+        }
+        .report-sub-title {
+            text-align: center;
+            font-size: 1.1em;
+            margin-bottom: 30px;
+            color: #555;
+        }
+        .text-muted {
+            color: #666;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 0.9em; /* Slightly smaller for tables */
+        }
+        table th, table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            vertical-align: top; /* Align content to top for multi-line cells */
+        }
+        table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+
+        /* List inside table for deployed devices */
+        ul {
+            list-style: none;
+            padding-left: 0;
+            margin-top: 0;
+            margin-bottom: 0;
+        }
+        ul li {
+            padding: 2px 0;
+            border-bottom: 1px solid #eee; /* Light separator */
+        }
+        ul li:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="document-page">
+        {{-- Report Header --}}
+        <div class="report-page-header">
+            <img src="{{ $logoUrl }}" alt="Logo" class="logo">
+            <div class="header-text">
+                <h3>DINAS KOMUNIKASI DAN INFORMASI KOTA PARIAMAN</h3>
+                <p>
+                    Jl. Jend. Sudirman 25-31, Pd. II, Kec. Pariaman Tengah,<br>
+                    Kota Pariaman, Sumatera Barat 25513
+                </p>
+            </div>
+        </div>
+
+        {{-- Report Titles --}}
+        {{-- Use $reportTypeToPrint for print, or $reportTypeToExport for download --}}
+        @php
+            $currentReportType = $reportTypeToPrint ?? $reportTypeToExport ?? 'unknown';
+            // Gunakan $rawFiltersForTemplate untuk cetak, atau $rawFilters untuk download
+            $currentFilters = $rawFiltersForTemplate ?? $rawFilters ?? [];
+        @endphp
+
+        @if ($currentReportType === 'letter')
+            @php
+                $letterNumber = $reportData['data'][0]['letter_number'] ?? 'N/A';
+                $letterSubject = $reportData['data'][0]['subject'] ?? 'N/A';
+            @endphp
+            <div class="report-main-title">BERITA ACARA SERAH TERIMA BARANG</div>
+            <div class="report-sub-title">Nomor: {{ $letterNumber }} - Perihal: {{ $letterSubject }}</div>
+        @else
+            <div class="report-main-title">LAPORAN {{ strtoupper($reportData['title'] ?? 'UMUM') }}</div>
+            <div class="report-sub-title">Tanggal Cetak: {{ \Carbon\Carbon::now()->locale('id')->isoFormat('D MMMM YYYY') }}</div>
+        @endif
+
+        <p class="text-muted">Periode: {{ $currentFilters['start_date'] ?? 'Awal' }} s/d {{ $currentFilters['end_date'] ?? 'Akhir' }}</p>
+
+        {{-- Report Data Tables --}}
+        @if (isset($reportData['data']) && count($reportData['data']) > 0)
+            @if ($currentReportType === 'inventory')
+                <table>
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>Perangkat</th>
+                            <th>Model</th>
+                            <th>Stok</th>
+                            <th>Kondisi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($reportData['data'] as $index => $item)
+                            <tr>
+                                <td>{{ $index + 1 }}</td>
+                                <td>{{ $item['device']['brand'] ?? '-' }} ({{ ucfirst(str_replace('_', ' ', $item['device']['type'] ?? '-')) }})</td>
+                                <td>{{ $item['device']['model'] ?? '-' }}</td>
+                                <td>{{ $item['stock'] }}</td>
+                                <td>{{ $item['condition'] }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            @elseif ($currentReportType === 'instansi')
+                <table>
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>Nama Instansi</th>
+                            <th>Tipe</th>
+                            <th>Kontak</th>
+                            <th>Alamat</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($reportData['data'] as $index => $item)
+                            <tr>
+                                <td>{{ $index + 1 }}</td>
+                                <td>{{ $item['institution'] }}</td>
+                                <td>{{ $item['institution_type'] }}</td>
+                                <td>{{ $item['phone'] ?? '-' }}</td>
+                                <td>{{ $item['address'] ?? '-' }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            @elseif ($currentReportType === 'other_profile')
+                <table>
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>Nama</th>
+                            <th>Instansi</th>
+                            <th>Tipe Instansi</th>
+                            <th>Kontak</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($reportData['data'] as $index => $item)
+                            <tr>
+                                <td>{{ $index + 1 }}</td>
+                                <td>{{ $item['name'] }}</td>
+                                <td>{{ $item['institution'] ?? '-' }}</td>
+                                <td>{{ $item['institution_type'] ?? '-' }}</td>
+                                <td>{{ $item['phone'] ?? '-' }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            @elseif ($currentReportType === 'flow_transaction')
+                <table>
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>ID Transaksi</th>
+                            <th>Tipe</th>
+                            <th>Klien/Sumber</th>
+                            <th>Status</th>
+                            <th>Tanggal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($reportData['data'] as $index => $item)
+                            @php
+                                $clientName = $item['client']['profile']['name'] ?? ($item['other_source_profile']['name'] ?? '-');
+                                $transactionTypeDisplay = ($item['transaction_type'] ?? '-') === 'in' ? 'Masuk' : 'Keluar';
+                            @endphp
+                            <tr>
+                                <td>{{ $index + 1 }}</td>
+                                <td>{{ $item['unique_id'] }}</td>
+                                <td>{{ $transactionTypeDisplay }}</td>
+                                <td>{{ $clientName }}</td>
+                                <td>{{ $item['instalation_status'] ?? '-' }}</td>
+                                <td>{{ \Carbon\Carbon::parse($item['created_at'])->locale('id')->isoFormat('D MMMM YYYY') }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            @elseif ($currentReportType === 'letter')
+                <table>
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>No. Surat</th>
+                            <th>Perihal</th>
+                            <th>Klien</th>
+                            <th>Tanggal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($reportData['data'] as $index => $item)
+                            @php
+                                $clientName = $item['client']['profile']['name'] ?? '-';
+                            @endphp
+                            <tr>
+                                <td>{{ $index + 1 }}</td>
+                                <td>{{ $item['letter_number'] ?? '-' }}</td>
+                                <td>{{ $item['subject'] ?? '-' }}</td>
+                                <td>{{ $clientName }}</td>
+                                <td>{{ \Carbon\Carbon::parse($item['created_at'])->locale('id')->isoFormat('D MMMM YYYY') }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            @elseif ($currentReportType === 'deployed_device')
+                <table>
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>Penerima</th>
+                            <th>Perangkat Dideploy</th>
+                            <th>Tanggal Deploy</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($reportData['data'] as $index => $item)
+                            @php
+                                $recipientName = $item['client']['profile']['name'] ?? '-';
+                                $devicesListHtml = '';
+                                if (isset($item['details']) && count($item['details']) > 0) {
+                                    $devicesListHtml .= '<ul>';
+                                    foreach ($item['details'] as $detail) {
+                                        $storedDevice = $detail['stored_device'] ?? null;
+                                        $device = $storedDevice['device'] ?? null;
+                                        if ($device) {
+                                            $deviceTypeDisplay = ucfirst(str_replace('_', ' ', $device['type'] ?? '-'));
+                                            $serialNumber = $storedDevice['serial_number'] ?? '';
+                                            $devicesListHtml .= "<li>" . ($device['brand'] ?? '-') . " " . ($device['model'] ?? '-') . " ({$deviceTypeDisplay}) " . ($serialNumber ? "[S/N: {$serialNumber}]" : '') . "</li>";
+                                        } else {
+                                            $devicesListHtml .= '<li>Perangkat tidak ditemukan</li>';
+                                        }
+                                    }
+                                    $devicesListHtml .= '</ul>';
+                                } else {
+                                    $devicesListHtml = 'Tidak ada perangkat';
+                                }
+                            @endphp
+                            <tr>
+                                <td>{{ $index + 1 }}</td>
+                                <td>{{ $recipientName }}</td>
+                                <td>{!! $devicesListHtml !!}</td>
+                                <td>{{ \Carbon\Carbon::parse($item['created_at'])->locale('id')->isoFormat('D MMMM YYYY') }}</td>
+                                <td>{{ $item['status'] ?? '-' }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            @endif
+        @else
+            <p class="text-muted text-center">Tidak ada data untuk laporan ini.</p>
+        @endif
+    </div>
+</body>
+</html>

@@ -1,0 +1,1 @@
+<link rel="icon" href="{{ asset('asset/image/icon_title.png') }}" type="image/x-icon">

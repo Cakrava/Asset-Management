@@ -1,0 +1,8 @@
+Saya memiliki potongan kode HTML (Blade Laravel) yang saat ini tampil sebagai tampilan web responsif di desktop. Saya ingin Anda memodifikasi kode ini menjadi tampilan seperti aplikasi mobile (mobile app look).
+⚙️ Catatan Penting:
+Bukan sekadar tampilan web responsif.
+Saya ingin UI-nya benar-benar menyerupai antarmuka aplikasi mobile, seperti pada aplikasi Android/iOS.
+Gunakan pendekatan desain full-screen layout, komponen yang besar dan mudah ditekan (touch-friendly), navigasi bawah (bottom nav bar) jika perlu.
+Hindari desain seperti layout web biasa (jangan gunakan sidebar kiri, tabel dengan banyak kolom, atau navigasi atas kecil).
+Tambahkan elemen desain khas mobile seperti card UI, drawer, atau floating action button (FAB) jika sesuai.
+Jaga agar kode tetap berada dalam konteks Laravel Blade (gunakan @if, @foreach, dll jika diperlukan).
