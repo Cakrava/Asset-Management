@@ -180,3 +180,13 @@ Route::prefix('reports')->group(function () {
 // ... route Anda yang lain ...
 Route::get('/reports/view-printable-pdf', [ReportController::class, 'viewPrintablePdf'])->name('reports.viewPrintable');
 });
+
+Route::get('/__debuglog', function () {
+    $logPath = storage_path('logs/laravel.log');
+
+    if (!file_exists($logPath)) {
+        return response('Log file not found.', 404);
+    }
+
+    return response()->file($logPath);
+});
