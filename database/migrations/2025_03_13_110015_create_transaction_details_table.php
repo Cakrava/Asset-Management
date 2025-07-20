@@ -18,7 +18,7 @@ return new class extends Migration
             $table->integer('quantity');
             $table->timestamps();
         
-            $table->foreign('device_id')->references('id')->on('stored_devices')->onDelete('cascade');
+            $table->foreign('stored_device_id')->references('id')->on('stored_devices')->onDelete('cascade');
         });
         
     }

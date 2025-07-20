@@ -23,7 +23,7 @@ Schema::create('transactions', function (Blueprint $table) {
     $table->integer('letter_id')->nullable();
     $table->timestamps();
 
-    $table->foreign('client_id')->references('id')->on('clients')->onDelete('set null');
+    $table->foreign('client_id')->references('id')->on('users')->onDelete('set null');
 });
 
     }
