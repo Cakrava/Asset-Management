@@ -3,6 +3,9 @@
 @section('content')
     {{-- Dependensi untuk Cropper.js --}}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    {{-- [MODIFIKASI] CSS untuk intl-tel-input --}}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.13/css/intlTelInput.css">
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 
     @include('component.loader')
@@ -172,7 +175,8 @@
                         <div class="tab-pane fade" id="edit-profile-content" role="tabpanel"
                             aria-labelledby="edit-profile-tab">
                             <div class="mobile-card-body">
-                                <form action="{{ route('panel.profile.update') }}" method="POST"
+                                {{-- [MODIFIKASI] Menambahkan ID pada form --}}
+                                <form id="profileFormMobile" action="{{ route('panel.profile.update') }}" method="POST"
                                     enctype="multipart/form-data">
                                     @csrf
                                     <div class="text-center mb-4">
@@ -187,7 +191,6 @@
                                                 <i class="ti ti-camera-plus" style="font-size: 1.5rem;"></i>
                                             </div>
                                         </div>
-                                        {{-- MODIFIKASI INPUT FILE MOBILE --}}
                                         <input id="fileInputMobile" type="file" accept="image/*" class="profile-image-input" data-preview-element="#imagePreviewMobile" data-hidden-input="#croppedImageInputMobile" style="display: none;" />
                                         <input type="hidden" name="profile_image" id="croppedImageInputMobile">
                                         <small class="d-block text-muted mt-2">Ketuk gambar untuk mengganti</small>
@@ -206,8 +209,15 @@
                                     </div>
                                     <div class="mb-3">
                                         <label for="phoneMobile" class="form-label">Nomor Telepon</label>
-                                        <input type="tel" class="form-control form-control-lg" id="phoneMobile" name="phone"
+                                        {{-- [MODIFIKASI] Penyesuaian input telepon --}}
+                                        <input type="tel" class="form-control form-control-lg w-100" id="phoneMobile" name="phone"
                                             value="{{ old('phone', $profile->phone) }}" placeholder="Nomor Telepon">
+                                        
+                                        {{-- [MODIFIKASI] Div tersembunyi untuk pesan validasi telepon --}}
+                                        <div class="alert alert-danger p-2 mt-2 d-none" id="phone-validation-alert-invalid-mobile" role="alert" style="font-size: 0.8em;">
+                                            Nomor telepon yang Anda masukkan tidak valid.
+                                            <button type="button" class="btn-close btn-sm" onclick="$(this).parent().addClass('d-none')" aria-label="Close" style="float: right;"></button>
+                                        </div>
                                     </div>
                                     <div class="mb-3">
                                         <label for="institutionMobile" class="form-label">Instansi</label>
@@ -305,336 +315,54 @@
                 <!-- [ Profile Card ] end -->
             </div>
         </div>
-
         <style>
-            /* Basic Reset & App Container */
-            body,
-            html {
-                margin: 0;
-                padding: 0;
-                height: 100%;
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-                background-color: #f0f2f5;
-                /* Common app background color */
-            }
-
-            .mobile-app-container {
-                display: flex;
-                flex-direction: column;
-                min-height: 100vh;
-                /* Full viewport height */
-            }
-
-            /* App Header (Top Bar) */
-            .app-header {
-                background-color: #0EA2BC;
-                /* Primary color */
-                color: white;
-                padding: 12px 15px;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-                position: sticky;
-                /* Atau fixed jika tidak ada konten di atasnya */
-                top: 0;
-                z-index: 1030;
-                /* Di atas konten lain */
-                height: 56px;
-                /* Standard app bar height */
-                display: flex;
-                align-items: center;
-            }
-
-            .app-header-content {
-                display: flex;
-                align-items: center;
-                width: 100%;
-            }
-
-            .app-header-back {
-                color: white;
-                font-size: 1.5rem;
-                margin-right: 15px;
-                text-decoration: none;
-            }
-
-            .app-header-title {
-                font-size: 1.2rem;
-                font-weight: 500;
-                margin: 0;
-                flex-grow: 1;
-            }
-
-            .app-header-menu-btn {
-                background: none;
-                border: none;
-                color: white;
-                font-size: 1.5rem;
-                padding: 0;
-            }
-
-
-            /* App Content Area */
-            .app-content {
-                flex-grow: 1;
-                padding: 15px;
-                overflow-y: auto;
-                /* Agar konten bisa di-scroll jika melebihi layar */
-                padding-bottom: 70px;
-                /* Ruang untuk bottom navigation jika ada */
-            }
-
-            /* Mobile Card Style */
-            .mobile-card {
-                background-color: #ffffff;
-                border-radius: 12px;
-                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-                margin-bottom: 15px;
-                overflow: hidden;
-                /* Untuk menjaga border-radius */
-            }
-
-            .mobile-card-body {
-                padding: 20px;
-            }
-
-            /* Mobile Tabs */
-            .mobile-tabs {
-                background-color: #f8f9fa;
-                /* Slightly different from card body */
-                border-bottom: 1px solid #dee2e6;
-                padding-top: 5px;
-                /* Small padding */
-            }
-
-            .mobile-tabs .nav-link {
-                color: #6c757d;
-                /* Abu-abu untuk tab tidak aktif */
-                border: none;
-                border-bottom: 3px solid transparent;
-                padding: 10px 5px;
-                /* Padding lebih touch-friendly */
-                font-size: 0.9rem;
-                font-weight: 500;
-                transition: color 0.2s ease, border-color 0.2s ease;
-            }
-
-            .mobile-tabs .nav-link.active {
-                color: #0EA2BC;
-                /* Warna primary untuk tab aktif */
-                border-bottom-color: #0EA2BC;
-                background-color: transparent !important;
-            }
-
-            .mobile-tabs .nav-link i {
-                display: block;
-                /* Ikon di atas teks */
-                font-size: 1.2rem;
-                /* Ukuran ikon sedikit lebih besar */
-                margin-bottom: 2px;
-            }
-
-            /* Accordion for Mobile */
-            .mobile-accordion-item {
-                border: none;
-                /* Hapus border bawaan accordion item */
-                border-bottom: 1px solid #eee;
-                /* Garis pemisah tipis */
-            }
-
-            .mobile-accordion-item:last-child {
-                border-bottom: none;
-            }
-
-            .accordion-button {
-                font-size: 1rem;
-                padding: 15px 20px;
-                background-color: #fff;
-                color: #333;
-            }
-
-            .accordion-button:not(.collapsed) {
-                color: #0EA2BC;
-                background-color: #f8f9fa;
-                box-shadow: none;
-            }
-
-            .accordion-button:focus {
-                box-shadow: none;
-                border-color: transparent;
-            }
-
-            .accordion-body {
-                padding: 15px 20px;
-                font-size: 0.95rem;
-            }
-
-            .accordion-body p {
-                color: #555;
-            }
-
-            .accordion-body strong {
-                color: #333;
-            }
-
-
-            /* Form Elements */
-            .form-label {
-                font-weight: 500;
-                color: #495057;
-                margin-bottom: 0.5rem;
-                font-size: 0.9rem;
-            }
-
-            .form-control-lg,
-            .form-select-lg {
-                padding: 0.8rem 1rem;
-                font-size: 1rem;
-                border-radius: 8px;
-                border: 1px solid #ced4da;
-            }
-
-            .form-control-lg:focus,
-            .form-select-lg:focus {
-                border-color: #0EA2BC;
-                box-shadow: 0 0 0 0.2rem rgba(14, 162, 188, 0.25);
-            }
-
-            .btn-lg {
-                padding: 0.8rem 1.5rem;
-                font-size: 1rem;
-                border-radius: 8px;
-            }
-
-            .btn-primary {
-                /* Pastikan warna primary konsisten */
-                background-color: #0EA2BC;
-                border-color: #0EA2BC;
-            }
-
-            .btn-primary:hover {
-                background-color: #0c8a9e;
-                border-color: #0c8a9e;
-            }
-
-            .btn-outline-primary {
-                color: #0EA2BC;
-                border-color: #0EA2BC;
-            }
-
-            .btn-outline-primary:hover {
-                background-color: rgba(14, 162, 188, 0.1);
-                color: #0EA2BC;
-            }
-
-
-            /* Profile Image Editing */
-            .profile-image-container-mobile {
-                position: relative;
-                display: inline-block;
-            }
-
-            .profile-image-mobile {
-                width: 120px;
-                height: 120px;
-                object-fit: cover;
-                object-position: center;
-                border: 3px solid #eee;
-                cursor: pointer;
-                transition: border-color 0.3s ease;
-            }
-
-            .profile-image-mobile:hover {
-                border-color: #0EA2BC;
-            }
-
-            .profile-overlay-mobile {
-                position: absolute;
-                bottom: 5px;
-                right: 5px;
-                width: 30px;
-                height: 30px;
-                border-radius: 50%;
-                background-color: rgba(14, 162, 188, 0.8);
-                /* Primary color with transparency */
-                color: white;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                cursor: pointer;
-                transition: background-color 0.3s ease;
-            }
-
-            .profile-overlay-mobile:hover {
-                background-color: #0EA2BC;
-            }
-
-
-            /* Password Toggle Mobile */
-            .password-input-group-mobile {
-                position: relative;
-            }
-
-            .password-field-mobile {
-                padding-right: 40px !important;
-                /* Space for icon */
-            }
-
-            .password-toggle-icon-mobile {
-                position: absolute;
-                top: 50%;
-                right: 12px;
-                transform: translateY(-50%);
-                cursor: pointer;
-                color: #6c757d;
-                font-size: 1.2rem;
-            }
-
-            /* Alert styling for mobile */
-            .mobile-alert {
-                margin: 0 20px 15px 20px;
-                /* Sesuai padding mobile-card-body */
-                border-radius: 8px;
-            }
-
-            .mobile-alert:first-child {
-                /* Jika alert adalah elemen pertama di card */
-                margin-top: 20px;
-            }
-
-            /* Placeholder for bottom navigation styling (jika ada) */
-            .bottom-nav-bar {
-                /* Asumsikan ini class utama di bottom-navigation.blade.php */
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                height: 60px;
-                background-color: #fff;
-                border-top: 1px solid #e0e0e0;
-                display: flex;
-                justify-content: space-around;
-                align-items: center;
-                z-index: 1000;
-                box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.05);
-            }
-
-            .bottom-nav-bar a {
-                color: #757575;
-                text-decoration: none;
-                text-align: center;
-                padding: 5px;
-                font-size: 0.75rem;
-            }
-
-            .bottom-nav-bar a.active {
-                color: #0EA2BC;
-                /* Primary color */
-            }
-
-            .bottom-nav-bar a i {
-                display: block;
-                font-size: 1.5rem;
-                margin-bottom: 2px;
-            }
+            /* All Mobile Styles... */
+            body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f0f2f5; }
+            .mobile-app-container { display: flex; flex-direction: column; min-height: 100vh; }
+            .app-header { background-color: #0EA2BC; color: white; padding: 12px 15px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); position: sticky; top: 0; z-index: 1030; height: 56px; display: flex; align-items: center; }
+            .app-header-content { display: flex; align-items: center; width: 100%; }
+            .app-header-back { color: white; font-size: 1.5rem; margin-right: 15px; text-decoration: none; }
+            .app-header-title { font-size: 1.2rem; font-weight: 500; margin: 0; flex-grow: 1; }
+            .app-header-menu-btn { background: none; border: none; color: white; font-size: 1.5rem; padding: 0; }
+            .app-content { flex-grow: 1; padding: 15px; overflow-y: auto; padding-bottom: 70px; }
+            .mobile-card { background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08); margin-bottom: 15px; overflow: hidden; }
+            .mobile-card-body { padding: 20px; }
+            .mobile-tabs { background-color: #f8f9fa; border-bottom: 1px solid #dee2e6; padding-top: 5px; }
+            .mobile-tabs .nav-link { color: #6c757d; border: none; border-bottom: 3px solid transparent; padding: 10px 5px; font-size: 0.9rem; font-weight: 500; transition: color 0.2s ease, border-color 0.2s ease; }
+            .mobile-tabs .nav-link.active { color: #0EA2BC; border-bottom-color: #0EA2BC; background-color: transparent !important; }
+            .mobile-tabs .nav-link i { display: block; font-size: 1.2rem; margin-bottom: 2px; }
+            .mobile-accordion-item { border: none; border-bottom: 1px solid #eee; }
+            .mobile-accordion-item:last-child { border-bottom: none; }
+            .accordion-button { font-size: 1rem; padding: 15px 20px; background-color: #fff; color: #333; }
+            .accordion-button:not(.collapsed) { color: #0EA2BC; background-color: #f8f9fa; box-shadow: none; }
+            .accordion-button:focus { box-shadow: none; border-color: transparent; }
+            .accordion-body { padding: 15px 20px; font-size: 0.95rem; }
+            .accordion-body p { color: #555; }
+            .accordion-body strong { color: #333; }
+            .form-label { font-weight: 500; color: #495057; margin-bottom: 0.5rem; font-size: 0.9rem; }
+            .form-control-lg, .form-select-lg { padding: 0.8rem 1rem; font-size: 1rem; border-radius: 8px; border: 1px solid #ced4da; }
+            .form-control-lg:focus, .form-select-lg:focus { border-color: #0EA2BC; box-shadow: 0 0 0 0.2rem rgba(14, 162, 188, 0.25); }
+            .btn-lg { padding: 0.8rem 1.5rem; font-size: 1rem; border-radius: 8px; }
+            .btn-primary { background-color: #0EA2BC; border-color: #0EA2BC; }
+            .btn-primary:hover { background-color: #0c8a9e; border-color: #0c8a9e; }
+            .btn-outline-primary { color: #0EA2BC; border-color: #0EA2BC; }
+            .btn-outline-primary:hover { background-color: rgba(14, 162, 188, 0.1); color: #0EA2BC; }
+            .profile-image-container-mobile { position: relative; display: inline-block; }
+            .profile-image-mobile { width: 120px; height: 120px; object-fit: cover; object-position: center; border: 3px solid #eee; cursor: pointer; transition: border-color 0.3s ease; }
+            .profile-image-mobile:hover { border-color: #0EA2BC; }
+            .profile-overlay-mobile { position: absolute; bottom: 5px; right: 5px; width: 30px; height: 30px; border-radius: 50%; background-color: rgba(14, 162, 188, 0.8); color: white; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: background-color 0.3s ease; }
+            .profile-overlay-mobile:hover { background-color: #0EA2BC; }
+            .password-input-group-mobile { position: relative; }
+            .password-field-mobile { padding-right: 40px !important; }
+            .password-toggle-icon-mobile { position: absolute; top: 50%; right: 12px; transform: translateY(-50%); cursor: pointer; color: #6c757d; font-size: 1.2rem; }
+            .mobile-alert { margin: 0 20px 15px 20px; border-radius: 8px; }
+            .mobile-alert:first-child { margin-top: 20px; }
+            .bottom-nav-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background-color: #fff; border-top: 1px solid #e0e0e0; display: flex; justify-content: space-around; align-items: center; z-index: 1000; box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.05); }
+            .bottom-nav-bar a { color: #757575; text-decoration: none; text-align: center; padding: 5px; font-size: 0.75rem; }
+            .bottom-nav-bar a.active { color: #0EA2BC; }
+            .bottom-nav-bar a i { display: block; font-size: 1.5rem; margin-bottom: 2px; }
+            /* [MODIFIKASI] Style untuk intl-tel-input di mobile */
+            .iti { width: 100%; }
         </style>
     </div>
 
@@ -809,7 +537,8 @@
                                             Profile Settings</h5>
                                         <hr class="border-primary mb-4">
 
-                                        <form action="{{ route('panel.profile.update') }}" method="POST"
+                                        {{-- [MODIFIKASI] Menambahkan ID pada form --}}
+                                        <form id="profileFormDesktop" action="{{ route('panel.profile.update') }}" method="POST"
                                             enctype="multipart/form-data">
                                             @csrf
                                             <div class="row mb-4 gy-3">
@@ -827,7 +556,6 @@
                                                             </p>
                                                         </div>
                                                     </div>
-                                                    {{-- MODIFIKASI INPUT FILE DESKTOP --}}
                                                     <input id="fileInput" type="file" accept="image/*" class="profile-image-input" data-preview-element="#imagePreview" data-hidden-input="#croppedImageInput" style="display: none;" />
                                                     <input type="hidden" name="profile_image" id="croppedImageInput">
                                                 </div>
@@ -850,9 +578,15 @@
                                                         <div class="col-md-6">
                                                             <label for="phone" class="form-label small text-muted">Phone
                                                                 Number</label>
-                                                            <input type="tel" class="form-control" id="phone" name="phone"
+                                                            {{-- [MODIFIKASI] Penyesuaian input telepon --}}
+                                                            <input type="tel" class="form-control w-100" id="phone" name="phone"
                                                                 value="{{ old('phone', $profile->phone) }}"
                                                                 placeholder="Phone Number">
+                                                            
+                                                            {{-- [MODIFIKASI] Div tersembunyi untuk pesan validasi telepon --}}
+                                                            <div class="alert alert-danger p-1 mt-1 d-none" id="phone-validation-alert-invalid-desktop" role="alert" style="font-size: 0.8em;">
+                                                                Nomor telepon tidak valid.
+                                                            </div>
                                                         </div>
                                                         <div class="col-md-6">
                                                             <label for="institution"
@@ -880,9 +614,7 @@
                                                         <div class="col-md-12">
                                                             <label for="institution_type" class="form-label small text-muted">Institution Type</label>
                                                             <select class="form-select" id="institution_type" name="institution_type">
-                                                                {{-- Menambahkan opsi default untuk kasus field belum diisi --}}
                                                                 <option value="" disabled @selected(is_null($profile->institution_type))>Pilih Tipe Institusi</option>
-                                                                
                                                                 <option value="government" @selected(old('institution_type', $profile->institution_type) == 'government')>Pemerintahan</option>
                                                                 <option value="private" @selected(old('institution_type', $profile->institution_type) == 'private')>Swasta</option>
                                                                 <option value="non_profit" @selected(old('institution_type', $profile->institution_type) == 'non_profit')>Nirlaba</option>
@@ -910,17 +642,11 @@
                                     </div>
 
                                     <style>
-                                        .text-primary { color: #0EA2BC; }
-                                        .border-primary { border-color: #0EA2BC; }
-                                        .bg-primary { background-color: #0EA2BC; }
-                                        .btn-primary { background-color: #0EA2BC; color: white; border-color: #0EA2BC; }
-                                        .btn-primary:hover { background-color: #0EA2BC; border-color: #0EA2BC; }
-                                        .btn-outline-primary { color: #0EA2BC; border-color: #0EA2BC; }
-                                        .btn-outline-primary:hover { background-color: #e0f2ff; }
-                                        .profile-image-container { position: relative; display: inline-block; }
-                                        .profile-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; background-color: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease; cursor: pointer; }
-                                        .profile-image-container:hover .profile-overlay { opacity: 1; }
-                                        .profile-overlay-text { color: white; font-weight: bold; font-size: 0.9em; text-align: center; display: flex; align-items: center; }
+                                        /* All Desktop Styles... */
+                                        .text-primary { color: #0EA2BC; } .border-primary { border-color: #0EA2BC; } .bg-primary { background-color: #0EA2BC; } .btn-primary { background-color: #0EA2BC; color: white; border-color: #0EA2BC; } .btn-primary:hover { background-color: #0EA2BC; border-color: #0EA2BC; } .btn-outline-primary { color: #0EA2BC; border-color: #0EA2BC; } .btn-outline-primary:hover { background-color: #e0f2ff; } .profile-image-container { position: relative; display: inline-block; } .profile-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; background-color: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease; cursor: pointer; } .profile-image-container:hover .profile-overlay { opacity: 1; } .profile-overlay-text { color: white; font-weight: bold; font-size: 0.9em; text-align: center; display: flex; align-items: center; }
+                                        /* [MODIFIKASI] Style untuk intl-tel-input di desktop */
+                                        .iti { width: 100%; }
+                                        .iti__country-list { z-index: 1056; }
                                     </style>
 
                                     <div class="tab-pane fade" id="change-password">
@@ -965,235 +691,215 @@
         </div>
 
         <style>
-            .card-body { padding-left: 5px; padding-right: 15px; }
-            .card-profile { border-radius: 15px; overflow: hidden; }
-            .profile-menu .list-group-item.profile-menu-item { border: none; background-color: transparent; }
-            .profile-menu .nav-link { color: #333; font-size: 0.9rem; padding: 0.5rem 1.25rem; margin-top: -10px; margin-bottom: -10px; border-radius: 0.25rem; transition: background-color 0.3s ease; }
-            .profile-menu .nav-link:hover, .profile-menu .nav-link.active { background-color: #e9ecef; color: #0EA2BC; }
-            .profile-content { padding-left: 10px; }
-            .profile-content h5 { color: #495057; }
-            .tab-pane.fade .password-input-group { position: relative; }
-            .tab-pane.fade .password-input-group .form-control.password-field { padding-right: 30px; }
-            .tab-pane.fade .password-toggle-icon.password-toggle { position: absolute; top: 50%; right: 5px; transform: translateY(-50%); cursor: pointer; opacity: 0.7; }
-            .tab-pane.fade .password-toggle-icon.password-toggle:hover { opacity: 1; }
-            .tab-pane.fade #edit-profile .row.mb-4 { display: flex; align-items: center; }
-            .tab-pane.fade #edit-profile .col-md-4 { display: flex; flex-direction: column; align-items: center; text-align: center; }
-            .tab-pane.fade #edit-profile .col-md-8 { padding-right: 20px; padding-left: 0; text-align: right; }
-            .profile-image { opacity: 1; transition: opacity 0.3s ease; }
-            .profile-image:hover { opacity: 0.8; border-color: #0EA2BC; transform: scale(1.05); transition: transform 0.3s ease, opacity 0.3s ease; }
+            .card-body { padding-left: 5px; padding-right: 15px; } .card-profile { border-radius: 15px; overflow: hidden; } .profile-menu .list-group-item.profile-menu-item { border: none; background-color: transparent; } .profile-menu .nav-link { color: #333; font-size: 0.9rem; padding: 0.5rem 1.25rem; margin-top: -10px; margin-bottom: -10px; border-radius: 0.25rem; transition: background-color 0.3s ease; } .profile-menu .nav-link:hover, .profile-menu .nav-link.active { background-color: #e9ecef; color: #0EA2BC; } .profile-content { padding-left: 10px; } .profile-content h5 { color: #495057; } .tab-pane.fade .password-input-group { position: relative; } .tab-pane.fade .password-input-group .form-control.password-field { padding-right: 30px; } .tab-pane.fade .password-toggle-icon.password-toggle { position: absolute; top: 50%; right: 5px; transform: translateY(-50%); cursor: pointer; opacity: 0.7; } .tab-pane.fade .password-toggle-icon.password-toggle:hover { opacity: 1; } .tab-pane.fade #edit-profile .row.mb-4 { display: flex; align-items: center; } .tab-pane.fade #edit-profile .col-md-4 { display: flex; flex-direction: column; align-items: center; text-align: center; } .tab-pane.fade #edit-profile .col-md-8 { padding-right: 20px; padding-left: 0; text-align: right; } .profile-image { opacity: 1; transition: opacity 0.3s ease; } .profile-image:hover { opacity: 0.8; border-color: #0EA2BC; transform: scale(1.05); transition: transform 0.3s ease, opacity 0.3s ease; }
         </style>
     </div>
 
-  <!-- [MODIFIKASI] Modal Cropping Gambar yang Ditingkatkan -->
-<!-- Alternatif 1: Toolbar Ganda -->
-<div class="modal fade" id="cropImageModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header py-2">
-                <div class="btn-toolbar w-100" role="toolbar">
-                    <div class="btn-group btn-group-sm me-2"><button class="btn btn-light" id="rotateLeft" title="Putar Kiri"><i class="ti ti-rotate-2"></i></button><button class="btn btn-light" id="rotateRight" title="Putar Kanan"><i class="ti ti-rotate-clockwise-2"></i></button></div>
-                    <div class="btn-group btn-group-sm me-2"><button class="btn btn-light" id="flipHorizontal" title="Balik Horizontal"><i class="ti ti-arrows-horizontal"></i></button><button class="btn btn-light" id="flipVertical" title="Balik Vertikal"><i class="ti ti-arrows-vertical"></i></button></div>
-                    <div class="btn-group btn-group-sm"><button class="btn btn-light" id="zoomIn" title="Perbesar"><i class="ti ti-zoom-in"></i></button><button class="btn btn-light" id="zoomOut" title="Perkecil"><i class="ti ti-zoom-out"></i></button></div>
-                    <div class="ms-auto"><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <!-- Modal Cropping Gambar -->
+    <div class="modal fade" id="cropImageModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <div class="btn-toolbar w-100" role="toolbar">
+                        <div class="btn-group btn-group-sm me-2"><button class="btn btn-light" id="rotateLeft" title="Putar Kiri"><i class="ti ti-rotate-2"></i></button><button class="btn btn-light" id="rotateRight" title="Putar Kanan"><i class="ti ti-rotate-clockwise-2"></i></button></div>
+                        <div class="btn-group btn-group-sm me-2"><button class="btn btn-light" id="flipHorizontal" title="Balik Horizontal"><i class="ti ti-arrows-horizontal"></i></button><button class="btn btn-light" id="flipVertical" title="Balik Vertikal"><i class="ti ti-arrows-vertical"></i></button></div>
+                        <div class="btn-group btn-group-sm"><button class="btn btn-light" id="zoomIn" title="Perbesar"><i class="ti ti-zoom-in"></i></button><button class="btn btn-light" id="zoomOut" title="Perkecil"><i class="ti ti-zoom-out"></i></button></div>
+                        <div class="ms-auto"><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                    </div>
                 </div>
-            </div>
-            <div class="modal-body">
-                <div class="img-container mb-3" style="height: 400px;"><img id="imageToCrop" style="max-height: 100%;"></div>
-                <div class="row gx-3">
-                    <div class="col"><label class="small">Brightness</label><input type="range" class="form-range" id="brightness" value="100" min="0" max="200" data-filter="brightness"></div>
-                    <div class="col"><label class="small">Contrast</label><input type="range" class="form-range" id="contrast" value="100" min="0" max="200" data-filter="contrast"></div>
-                    <div class="col"><label class="small">Saturate</label><input type="range" class="form-range" id="saturate" value="100" min="0" max="200" data-filter="saturate"></div>
-                    <div class="col"><label class="small">Grayscale</label><input type="range" class="form-range" id="grayscale" value="0" min="0" max="100" data-filter="grayscale"></div>
-                    <div class="col"><label class="small">Hue</label><input type="range" class="form-range" id="hue-rotate" value="0" min="0" max="360" data-filter="hue-rotate"></div>
+                <div class="modal-body">
+                    <div class="img-container mb-3" style="height: 400px;"><img id="imageToCrop" style="max-height: 100%;"></div>
+                    <div class="row gx-3">
+                        <div class="col"><label class="small">Brightness</label><input type="range" class="form-range" id="brightness" value="100" min="0" max="200" data-filter="brightness"></div>
+                        <div class="col"><label class="small">Contrast</label><input type="range" class="form-range" id="contrast" value="100" min="0" max="200" data-filter="contrast"></div>
+                        <div class="col"><label class="small">Saturate</label><input type="range" class="form-range" id="saturate" value="100" min="0" max="200" data-filter="saturate"></div>
+                        <div class="col"><label class="small">Grayscale</label><input type="range" class="form-range" id="grayscale" value="0" min="0" max="100" data-filter="grayscale"></div>
+                        <div class="col"><label class="small">Hue</label><input type="range" class="form-range" id="hue-rotate" value="0" min="0" max="360" data-filter="hue-rotate"></div>
+                    </div>
                 </div>
+                <div class="modal-footer"><button class="btn btn-light" id="resetFilters">Reset</button><div class="flex-grow-1"></div><button class="btn btn-secondary" data-bs-dismiss="modal">Batal</button><button class="btn btn-primary" id="cropAndSaveButton">Simpan</button></div>
             </div>
-            <div class="modal-footer"><button class="btn btn-light" id="resetFilters">Reset</button><div class="flex-grow-1"></div><button class="btn btn-secondary" data-bs-dismiss="modal">Batal</button><button class="btn btn-primary" id="cropAndSaveButton">Simpan</button></div>
         </div>
     </div>
-</div>
+    
+    {{-- [MODIFIKASI] Menambahkan JS untuk intl-tel-input --}}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.13/js/intlTelInput.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.13/js/utils.js"></script>
+
     {{-- Kumpulan Semua Script --}}
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-        
+
+            // ==========================================================
+            // [MODIFIKASI] SCRIPT UNTUK INPUT TELEPON INTERNASIONAL
+            // ==========================================================
+            const phoneInputDesktop = document.querySelector("#phone");
+            const phoneInputMobile = document.querySelector("#phoneMobile");
+
+            const itiDesktop = window.intlTelInput(phoneInputDesktop, {
+                initialCountry: "id",
+                separateDialCode: true,
+                utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.13/js/utils.js",
+            });
+
+            const itiMobile = window.intlTelInput(phoneInputMobile, {
+                initialCountry: "id",
+                separateDialCode: true,
+                utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.13/js/utils.js",
+            });
+
+            // Handler untuk form desktop
+            const formDesktop = document.getElementById('profileFormDesktop');
+            if(formDesktop) {
+                formDesktop.addEventListener('submit', function(e) {
+                    // Sembunyikan peringatan sebelumnya
+                    document.getElementById('phone-validation-alert-invalid-desktop').classList.add('d-none');
+
+                    // Cek jika input diisi tapi tidak valid
+                    if (phoneInputDesktop.value.trim() && !itiDesktop.isValidNumber()) {
+                        e.preventDefault(); // Hentikan submit
+                        document.getElementById('phone-validation-alert-invalid-desktop').classList.remove('d-none'); // Tampilkan error
+                    } else {
+                        // Jika valid atau kosong, set ke format internasional
+                        phoneInputDesktop.value = itiDesktop.getNumber();
+                    }
+                });
+            }
+
+            // Handler untuk form mobile
+            const formMobile = document.getElementById('profileFormMobile');
+            if(formMobile) {
+                formMobile.addEventListener('submit', function(e) {
+                    // Sembunyikan peringatan sebelumnya
+                    document.getElementById('phone-validation-alert-invalid-mobile').classList.add('d-none');
+
+                    // Cek jika input diisi tapi tidak valid
+                    if (phoneInputMobile.value.trim() && !itiMobile.isValidNumber()) {
+                        e.preventDefault(); // Hentikan submit
+                        document.getElementById('phone-validation-alert-invalid-mobile').classList.remove('d-none'); // Tampilkan error
+                    } else {
+                        // Jika valid atau kosong, set ke format internasional
+                        phoneInputMobile.value = itiMobile.getNumber();
+                    }
+                });
+            }
+
+            // ==========================================================
+            // SCRIPT LAMA (CROPPING, GEOLOCATION, DLL.)
+            // ==========================================================
             const cropImageModalElement = document.getElementById('cropImageModal');
-    if (cropImageModalElement) {
-        const cropImageModal = new bootstrap.Modal(cropImageModalElement);
-        const imageToCrop = document.getElementById('imageToCrop');
-        const cropAndSaveButton = document.getElementById('cropAndSaveButton');
-        let cropper;
-        let currentPreviewElement, currentHiddenInput;
+            if (cropImageModalElement) {
+                const cropImageModal = new bootstrap.Modal(cropImageModalElement);
+                const imageToCrop = document.getElementById('imageToCrop');
+                const cropAndSaveButton = document.getElementById('cropAndSaveButton');
+                let cropper;
+                let currentPreviewElement, currentHiddenInput;
 
-        // ==========================================================
-        // 1. DEFINISI SEMUA ELEMEN KONTROL
-        // ==========================================================
-        // Kontrol Aksi Dasar
-        const rotateLeftBtn = document.getElementById('rotateLeft');
-        const rotateRightBtn = document.getElementById('rotateRight');
-        const flipHorizontalBtn = document.getElementById('flipHorizontal');
-        const flipVerticalBtn = document.getElementById('flipVertical');
-        
-        // Kontrol Zoom
-        const zoomInBtn = document.getElementById('zoomIn');
-        const zoomOutBtn = document.getElementById('zoomOut');
+                const rotateLeftBtn = document.getElementById('rotateLeft');
+                const rotateRightBtn = document.getElementById('rotateRight');
+                const flipHorizontalBtn = document.getElementById('flipHorizontal');
+                const flipVerticalBtn = document.getElementById('flipVertical');
+                const zoomInBtn = document.getElementById('zoomIn');
+                const zoomOutBtn = document.getElementById('zoomOut');
+                const filterSliders = document.querySelectorAll('.form-range');
+                const resetBtn = document.getElementById('resetFilters');
 
-        // Kontrol Filter (Slider)
-        const filterSliders = document.querySelectorAll('.form-range');
-        
-        // Kontrol Reset
-        const resetBtn = document.getElementById('resetFilters');
+                let currentFilters = { brightness: 100, contrast: 100, grayscale: 0, saturate: 100, 'hue-rotate': 0 };
 
-        // Objek untuk menyimpan state filter saat ini
-        let currentFilters = { 
-            brightness: 100, 
-            contrast: 100, 
-            grayscale: 0, 
-            saturate: 100, 
-            'hue-rotate': 0 
-        };
-
-
-        // ==========================================================
-        // 2. LOGIKA PEMILIHAN GAMBAR (Klik & Drag-Drop)
-        // ==========================================================
-        function handleFile(file) {
-            if (file && file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    imageToCrop.src = e.target.result;
-                    cropImageModal.show();
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        // Event listener untuk input file (klik)
-        document.querySelectorAll('.profile-image-input').forEach(input => {
-            input.addEventListener('change', (event) => {
-                currentPreviewElement = document.querySelector(event.target.dataset.previewElement);
-                currentHiddenInput = document.querySelector(event.target.dataset.hiddenInput);
-                if (event.target.files.length > 0) {
-                    handleFile(event.target.files[0]);
+                function handleFile(file) {
+                    if (file && file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            imageToCrop.src = e.target.result;
+                            cropImageModal.show();
+                        };
+                        reader.readAsDataURL(file);
+                    }
                 }
-                event.target.value = ''; // Selalu reset input file
-            });
-        });
 
-        // (Opsional) Event listener untuk Drag and Drop
-        document.querySelectorAll('.drop-zone').forEach(zone => {
-            zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
-            zone.addEventListener('dragleave', e => { e.preventDefault(); zone.classList.remove('drag-over'); });
-            zone.addEventListener('drop', e => {
-                e.preventDefault();
-                zone.classList.remove('drag-over');
-                currentPreviewElement = zone;
-                currentHiddenInput = document.querySelector(zone.dataset.hiddenInput || (zone.id === 'imagePreview' ? '#croppedImageInput' : '#croppedImageInputMobile'));
-                if (e.dataTransfer.files.length > 0) {
-                    handleFile(e.dataTransfer.files[0]);
+                document.querySelectorAll('.profile-image-input').forEach(input => {
+                    input.addEventListener('change', (event) => {
+                        currentPreviewElement = document.querySelector(event.target.dataset.previewElement);
+                        currentHiddenInput = document.querySelector(event.target.dataset.hiddenInput);
+                        if (event.target.files.length > 0) { handleFile(event.target.files[0]); }
+                        event.target.value = '';
+                    });
+                });
+
+                cropImageModalElement.addEventListener('shown.bs.modal', () => {
+                    cropper = new Cropper(imageToCrop, { aspectRatio: 1, viewMode: 1, autoCropArea: 0.9, responsive: true, background: false, guides: false, center: false });
+                });
+
+                cropImageModalElement.addEventListener('hidden.bs.modal', () => {
+                    if (cropper) { cropper.destroy(); cropper = null; }
+                    const cropperImage = cropImageModalElement.querySelector('.cropper-view-box img');
+                    if(cropperImage) cropperImage.style.filter = '';
+                    if(resetBtn) resetBtn.click();
+                });
+
+                if(rotateLeftBtn) rotateLeftBtn.addEventListener('click', () => cropper && cropper.rotate(-90));
+                if(rotateRightBtn) rotateRightBtn.addEventListener('click', () => cropper && cropper.rotate(90));
+                if(flipHorizontalBtn) flipHorizontalBtn.addEventListener('click', () => cropper && cropper.scaleX(-cropper.getData().scaleX || -1));
+                if(flipVerticalBtn) flipVerticalBtn.addEventListener('click', () => cropper && cropper.scaleY(-cropper.getData().scaleY || -1));
+                if(zoomInBtn) zoomInBtn.addEventListener('click', () => cropper && cropper.zoom(0.1));
+                if(zoomOutBtn) zoomOutBtn.addEventListener('click', () => cropper && cropper.zoom(-0.1));
+                
+                function applyCssFilters() {
+                    const cropperImage = cropImageModalElement.querySelector('.cropper-view-box img');
+                    if(cropperImage) {
+                        const filterString = Object.entries(currentFilters).map(([key, value]) => {
+                            const unit = key === 'hue-rotate' ? 'deg' : '%';
+                            return `${key}(${value}${unit})`;
+                        }).join(' ');
+                        cropperImage.style.filter = filterString;
+                    }
                 }
-            });
-        });
-
-
-        // ==========================================================
-        // 3. LOGIKA MODAL DAN INISIALISASI CROPPER
-        // ==========================================================
-        cropImageModalElement.addEventListener('shown.bs.modal', () => {
-            cropper = new Cropper(imageToCrop, {
-                aspectRatio: 1, viewMode: 1, autoCropArea: 0.9,
-                responsive: true, background: false, guides: false, center: false,
-            });
-        });
-
-        cropImageModalElement.addEventListener('hidden.bs.modal', () => {
-            if (cropper) {
-                cropper.destroy();
-                cropper = null;
-            }
-            // Reset filter
-            const cropperImage = cropImageModalElement.querySelector('.cropper-view-box img');
-            if(cropperImage) cropperImage.style.filter = '';
-            // Reset slider
-            resetBtn.click();
-        });
-
-
-        // ==========================================================
-        // 4. SEMUA EVENT LISTENER UNTUK KONTROL EDITOR
-        // ==========================================================
-        
-        // [FIX] KONTROL DASAR (Rotate, Flip, Zoom)
-        if(rotateLeftBtn) rotateLeftBtn.addEventListener('click', () => cropper && cropper.rotate(-90));
-        if(rotateRightBtn) rotateRightBtn.addEventListener('click', () => cropper && cropper.rotate(90));
-        if(flipHorizontalBtn) flipHorizontalBtn.addEventListener('click', () => cropper && cropper.scaleX(-cropper.getData().scaleX || -1));
-        if(flipVerticalBtn) flipVerticalBtn.addEventListener('click', () => cropper && cropper.scaleY(-cropper.getData().scaleY || -1));
-        if(zoomInBtn) zoomInBtn.addEventListener('click', () => cropper && cropper.zoom(0.1));
-        if(zoomOutBtn) zoomOutBtn.addEventListener('click', () => cropper && cropper.zoom(-0.1));
-        
-        // KONTROL FILTER (Slider)
-        function applyCssFilters() {
-            const cropperImage = cropImageModalElement.querySelector('.cropper-view-box img');
-            if(cropperImage) {
-                const filterString = Object.entries(currentFilters).map(([key, value]) => {
-                    const unit = key === 'hue-rotate' ? 'deg' : '%';
-                    return `${key}(${value}${unit})`;
-                }).join(' ');
-                cropperImage.style.filter = filterString;
-            }
-        }
-        
-        filterSliders.forEach(slider => {
-            slider.addEventListener('input', (e) => {
-                currentFilters[e.target.dataset.filter] = e.target.value;
-                applyCssFilters();
-            });
-        });
-
-        // KONTROL RESET
-        if(resetBtn) {
-            resetBtn.addEventListener('click', () => {
-                if(cropper) cropper.reset();
-                currentFilters = { brightness: 100, contrast: 100, grayscale: 0, saturate: 100, 'hue-rotate': 0 };
-                applyCssFilters();
+                
                 filterSliders.forEach(slider => {
-                    slider.value = currentFilters[slider.dataset.filter];
-                });
-            });
-        }
-        
-        // ==========================================================
-        // 5. LOGIKA SIMPAN (Terapkan semua efek)
-        // ==========================================================
-        if(cropAndSaveButton) {
-            cropAndSaveButton.addEventListener('click', () => {
-                if (!cropper) return;
-                
-                const finalCanvas = document.createElement('canvas');
-                const ctx = finalCanvas.getContext('2d');
-                const croppedCanvas = cropper.getCroppedCanvas({
-                    width: 1024, height: 1024, imageSmoothingQuality: 'high'
+                    slider.addEventListener('input', (e) => {
+                        currentFilters[e.target.dataset.filter] = e.target.value;
+                        applyCssFilters();
+                    });
                 });
 
-                finalCanvas.width = croppedCanvas.width;
-                finalCanvas.height = croppedCanvas.height;
+                if(resetBtn) {
+                    resetBtn.addEventListener('click', () => {
+                        if(cropper) cropper.reset();
+                        currentFilters = { brightness: 100, contrast: 100, grayscale: 0, saturate: 100, 'hue-rotate': 0 };
+                        applyCssFilters();
+                        filterSliders.forEach(slider => { slider.value = currentFilters[slider.dataset.filter]; });
+                    });
+                }
+                
+                if(cropAndSaveButton) {
+                    cropAndSaveButton.addEventListener('click', () => {
+                        if (!cropper) return;
+                        
+                        const finalCanvas = document.createElement('canvas');
+                        const ctx = finalCanvas.getContext('2d');
+                        const croppedCanvas = cropper.getCroppedCanvas({ width: 1024, height: 1024, imageSmoothingQuality: 'high' });
 
-                const filterString = Object.entries(currentFilters).map(([key, value]) => {
-                    const unit = key === 'hue-rotate' ? 'deg' : '%';
-                    return `${key}(${value}${unit})`;
-                }).join(' ');
-                
-                ctx.filter = filterString;
-                ctx.drawImage(croppedCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
-                
-                const finalDataUrl = finalCanvas.toDataURL('image/jpeg', 0.9);
-                
-                currentPreviewElement.src = finalDataUrl;
-                currentHiddenInput.value = finalDataUrl;
-                
-                cropImageModal.hide();
-            });
-        }
-    }
-            // --- [LAMA] Logika untuk Toggle Password ---
+                        finalCanvas.width = croppedCanvas.width;
+                        finalCanvas.height = croppedCanvas.height;
+                        
+                        const filterString = Object.entries(currentFilters).map(([key, value]) => {
+                            const unit = key === 'hue-rotate' ? 'deg' : '%';
+                            return `${key}(${value}${unit})`;
+                        }).join(' ');
+                        
+                        ctx.filter = filterString;
+                        ctx.drawImage(croppedCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
+                        
+                        const finalDataUrl = finalCanvas.toDataURL('image/jpeg', 0.9);
+                        
+                        currentPreviewElement.src = finalDataUrl;
+                        currentHiddenInput.value = finalDataUrl;
+                        
+                        cropImageModal.hide();
+                    });
+                }
+            }
+
             const passwordInputGroups = document.querySelectorAll('.password-input-group, .password-input-group-mobile');
             passwordInputGroups.forEach(inputGroup => {
                 const passwordInput = inputGroup.querySelector('.password-field, .password-field-mobile');
@@ -1214,7 +920,6 @@
                 }
             });
 
-            // --- [LAMA] Logika untuk Geolocation (Desktop) ---
             const getLocationBtnDesktop = document.getElementById('getLocationBtnDesktop');
             if (getLocationBtnDesktop) {
                 const apiKey = "{{ env('API_GEOCODE') }}";
@@ -1226,20 +931,13 @@
                             document.getElementById('reference').value = `${lat}, ${lon}`;
                             fetch(`https://geocode.maps.co/reverse?lat=${lat}&lon=${lon}&api_key=${apiKey}`)
                                 .then(response => response.json())
-                                .then(data => {
-                                    if(data.display_name) {
-                                        document.querySelector('input[name="address"]').value = data.display_name;
-                                    }
-                                })
+                                .then(data => { if(data.display_name) { document.querySelector('input[name="address"]').value = data.display_name; }})
                                 .catch(error => console.error("Error fetching address:", error));
                         }, (error) => alert("Error mendapatkan lokasi: " + error.message));
-                    } else {
-                        alert("Geolocation tidak didukung oleh browser ini.");
-                    }
+                    } else { alert("Geolocation tidak didukung oleh browser ini."); }
                 });
             }
 
-            // --- [LAMA] Logika untuk Geolocation (Mobile) ---
             const getLocationBtnMobile = document.getElementById('getLocationBtnMobile');
             if (getLocationBtnMobile) {
                 const apiKeyMobile = "{{ env('API_GEOCODE') }}";
@@ -1251,37 +949,24 @@
                             document.getElementById('referenceMobile').value = `${lat}, ${lon}`;
                             fetch(`https://geocode.maps.co/reverse?lat=${lat}&lon=${lon}&api_key=${apiKeyMobile}`)
                                 .then(response => response.json())
-                                .then(data => {
-                                    if(data.display_name) {
-                                        document.getElementById('addressMobile').value = data.display_name;
-                                    }
-                                })
+                                .then(data => { if(data.display_name) { document.getElementById('addressMobile').value = data.display_name; }})
                                 .catch(error => console.error("Error fetching address:", error));
                         }, (error) => alert("Error mendapatkan lokasi: " + error.message));
-                    } else {
-                        alert("Geolocation tidak didukung oleh browser ini.");
-                    }
+                    } else { alert("Geolocation tidak didukung oleh browser ini."); }
                 });
             }
 
-            // --- [LAMA] Logika untuk Navigasi Tab ---
             var hash = window.location.hash;
             if (hash) {
                 var triggerEl = document.querySelector('.nav-link[href="' + hash + '"], .mobile-tabs a[href="' + hash + '-content"]');
-                if (triggerEl) {
-                    var tab = new bootstrap.Tab(triggerEl);
-                    tab.show();
-                }
+                if (triggerEl) { var tab = new bootstrap.Tab(triggerEl); tab.show(); }
             }
             var tabElements = document.querySelectorAll('a[data-bs-toggle="tab"], a[data-bs-toggle="pill"]');
             tabElements.forEach(function (tabEl) {
                 tabEl.addEventListener('shown.bs.tab', function (event) {
                     var newHash = event.target.getAttribute('href').replace('-content', '');
-                    if (history.pushState) {
-                        history.pushState(null, null, newHash);
-                    } else {
-                        window.location.hash = newHash;
-                    }
+                    if (history.pushState) { history.pushState(null, null, newHash); } 
+                    else { window.location.hash = newHash; }
                 });
             });
 

@@ -10,14 +10,16 @@ use Illuminate\Support\Facades\Session;
 
 class DeviceController extends Controller
 {
+
+
     public function index()
     {
-        $devices = Device::whereNotIn('status', ['deleted', 'duplicate'])
-    ->orderBy('created_at', 'desc')
-    ->get();
+        // 1. Mengambil semua perangkat yang tidak dihapus, diurutkan berdasarkan yang terbaru.
+        $devices = Device::where('status', '!=', 'deleted')
+            ->orderBy('created_at', 'desc')
+            ->get();
 
-
-
+        // 2. Daftar nama jenis perangkat untuk ditampilkan di form atau filter.
         $deviceTypeNames = [
             'router' => 'Router',
             'access_point' => 'Access Point',
@@ -63,77 +65,46 @@ class DeviceController extends Controller
             'cable_tester' => 'Cable Tester',
         ];
 
-
-        $duplicates = Device::whereNotIn('status', ['deleted', 'duplicate'])
-        ->selectRaw('LOWER(brand) as brand, LOWER(model) as model, COUNT(*) as total, GROUP_CONCAT(id) as device_ids')
-        ->groupByRaw('LOWER(brand), LOWER(model)')
-        ->having('total', '>', 1)
-        ->get();
-    
-
-        if ($duplicates->isNotEmpty()) {
-            $warningMessage = "<div style='position:relative;'>"; // Container relatif untuk positioning button
-            foreach ($duplicates as $dup) {
-                $warningMessage .= "<details>"; // Tag details untuk collapsible section
-                $warningMessage .= "<summary>" . $dup->brand . "-" . $dup->model . " ({$dup->total} data)</summary>";
-
-                $deviceIds = explode(',', $dup->device_ids); // Pecah string device_ids menjadi array ID
-                $duplicateDevices = Device::whereIn('id', $deviceIds)->get(); // Ambil data perangkat duplikat
-
-                $warningMessage .= "<ul class='duplicate-device-list'>"; // Tambahkan class untuk seleksi JS
-                foreach ($duplicateDevices as $device) {
-                    $warningMessage .= "<li>";
-                    $warningMessage .= "<div class='form-check'>";
-                    $warningMessage .= "<input class='form-check-input duplicate-checkbox' type='checkbox' value='" . $device->id . "' id='duplicateCheckbox_" . $device->id . "'>";
-                    $warningMessage .= "<label class='form-check-label' for='duplicateCheckbox_" . $device->id . "'>";
-                    $warningMessage .= $device->brand . "- " . $device->model;
-                    $warningMessage .= "</label>";
-                    $warningMessage .= "</div>";
-                    $warningMessage .= "</li>";
-                }
-                $warningMessage .= "</ul>";
-                $warningMessage .= "</details>"; // Penutup tag details
-            }
-            $warningMessage .= "<button type='button' id='btn-bulk-delete-all-duplicates' class='btn btn-danger btn-sm' style='position:absolute; bottom: 10px; right: 10px;' disabled><i class='ti ti-trash'></i> Delete</button>"; // Tombol Bersihkan dipindahkan ke luar loop, di pojok kanan bawah container
-            $warningMessage .= "</div>"; // Penutup container relatif
-            Session::flash('warning', $warningMessage);
-        }
-
-        return view('page.device', compact('devices','deviceTypeNames'));
+        return view('page.device', compact('devices', 'deviceTypeNames'));
     }
 
-    public function bulkDestroyFromDuplicates(Request $request)
-    {
-        $deviceIds = $request->input('ids');
-    
-        if (is_array($deviceIds) && !empty($deviceIds)) {
-            $jumlahDitandai = Device::whereIn('id', $deviceIds)->update([
-                'status' => 'duplicate',
-                'note' => 'ditandai sebagai duplikat otomatis',
-                'updated_at' => now(), // biar ketahuan kapan ditandai
-            ]);
-    
-            Session::flash('success', $jumlahDitandai . ' perangkat ditandai sebagai duplikat!');
-            return response()->json(['message' => 'Berhasil menandai ' . $jumlahDitandai . ' perangkat duplikat sebagai "deleted".']);
-        } else {
-            return response()->json(['error' => 'Tidak ada perangkat duplikat yang dipilih!']);
-        }
-    }
-    
+
     public function store(Request $request)
     {
         $validatedData = $request->validate([
             'brand' => 'required|max:255',
             'model' => 'required|max:255',
-            'type' => 'required', // Removed exists:device_types,id validation, adjust as needed
+            'type' => 'required|string',
         ]);
 
+        // Cari perangkat yang cocok tanpa mempedulikan huruf besar/kecil
+        $existingDevice = Device::whereRaw('LOWER(brand) = ?', [strtolower($validatedData['brand'])])
+                                ->whereRaw('LOWER(model) = ?', [strtolower($validatedData['model'])])
+                                ->whereRaw('LOWER(type) = ?', [strtolower($validatedData['type'])])
+                                ->first();
+
+        if ($existingDevice) {
+            // Jika perangkat ditemukan, cek statusnya
+            if ($existingDevice->status === 'deleted') {
+                // Jika statusnya deleted, aktifkan kembali
+                $existingDevice->status = 'active'; // Asumsikan status default adalah 'active'
+                $existingDevice->save();
+
+                return response()->json(['message' => 'Perangkat yang sama pernah dihapus dan kini berhasil diaktifkan kembali.']);
+            } else {
+                // Jika statusnya BUKAN deleted, berarti ini duplikat aktif. Tolak.
+                // Kondisi ini menangani baik yang sama persis (plek ketiplek) maupun yang beda kapitalisasi.
+                return response()->json(['message' => 'Perangkat dengan brand, model, dan tipe yang sama persis sudah ada.'], 400);
+            }
+        }
+
+        // Jika tidak ada perangkat yang cocok sama sekali, buat yang baru.
         Device::create($validatedData);
 
         return response()->json(['message' => 'Perangkat berhasil ditambahkan.']);
     }
 
-
+ 
     public function update(Request $request)
     {
         $deviceId = $request->input('device_id');
@@ -142,8 +113,22 @@ class DeviceController extends Controller
         $validatedData = $request->validate([
             'brand' => 'required|max:255',
             'model' => 'required|max:255',
-            'type' => 'required', // Removed exists:device_types,id validation, adjust as needed
+            'type' => 'required|string',
         ]);
+
+        // Cek apakah ada perangkat LAIN yang memiliki kombinasi brand, model, dan tipe yang sama.
+        $duplicateCheck = Device::where('id', '!=', $device->id) // <-- Poin Kunci: Kecualikan diri sendiri
+                                ->whereRaw('LOWER(brand) = ?', [strtolower($validatedData['brand'])])
+                                ->whereRaw('LOWER(model) = ?', [strtolower($validatedData['model'])])
+                                ->whereRaw('LOWER(type) = ?', [strtolower($validatedData['type'])])
+                                ->exists(); // `exists()` lebih efisien karena hanya butuh jawaban ya/tidak
+
+        if ($duplicateCheck) {
+            // Jika ditemukan duplikat, kembalikan error 400.
+            return response()->json(['message' => 'Update gagal. Perangkat lain dengan brand, model, dan tipe ini sudah ada.'], 400);
+        }
+
+        // Jika tidak ada duplikat, lanjutkan proses update.
         $device->update($validatedData);
 
         return response()->json(['message' => 'Perangkat berhasil diupdate.']);

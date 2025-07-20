@@ -61,19 +61,18 @@ Route::middleware([CheckLoginStatus::class])->group(function () {
         Route::post('/message/client-message', [MessageController::class, 'userMessage'])->name('panel.chat.send');
         Route::post('tickets/client', [TicketController::class, 'store'])->name('panel.ticket.store');
         Route::post('/tickets/client-cancel', [TicketController::class, 'cancel'])->name('panel.ticket.cancel');
-        Route::get('/chat',     [MessageController::class, 'index'])->name('chat.index');
         Route::post('/panel/user/messages/mark-as-read', [MessageController::class, 'markMessagesFromAdminAsRead'])->name('panel.user.messages.markAsRead');
         Route::get('/histories', [HistoryController::class, 'index'])->name('histories.index');
+        Route::get('/chat',     [MessageController::class, 'index'])->name('chat.index');
         Route::post('/histories', [HistoryController::class, 'store'])->name('histories.store');
         Route::get('/histories/show', [HistoryController::class, 'show'])->name('histories.show');
     });
-
+    
     // ====================================================================
     // RUTE KHUSUS ROLE: ADMIN
     // ====================================================================
     Route::middleware('role:admin')->group(function () {
         // Stored Device
-        Route::get('stored-device', [StoredDeviceController::class, 'index'])->name('panel.stored-device');
         Route::post('stored-device/store', [StoredDeviceController::class, 'store'])->name('panel.stored-device.store');
         Route::post('stored-device/update', [StoredDeviceController::class, 'update'])->name('panel.stored-device.update');
         Route::delete('stored-device/destroy/{id}', [StoredDeviceController::class, 'destroy'])->name('panel.stored-device.destroy');
@@ -99,19 +98,21 @@ Route::middleware([CheckLoginStatus::class])->group(function () {
         Route::post('/panel/admin/chat/mark-as-read', [MessageController::class, 'markMessagesAsRead'])->name('panel.admin.chat.markAsRead');
         Route::get('/delete.chat', [MessageController::class, 'deleteChat'])->name('delete.chat');
         Route::post('/chat/send', [MessageController::class, 'sendMessage'])->name('panel.admin.chat.send');
-
+        Route::get('/chat',     [MessageController::class, 'adminIndex'])->name('chat.index.admin');
+        
         // Letter Admin
         Route::post('/letters/generate-sst', [LettersController::class, 'generateSst'])->name('admin.letters.generateSst');
-        Route::get('/letter', [LettersController::class, 'index'])->name('admin.letter.view');
         Route::post('/letter', [LettersController::class, 'index'])->name('admin.letter.store');
         Route::delete('/panel/letters/{letter}/delete', [LettersController::class, 'softDelete'])->name('panel.letter.softDelete');
     });
-
+    
     // ====================================================================
     // RUTE KHUSUS ROLE: MASTER
     // ====================================================================
-    Route::middleware('role:master')->group(function () {
+    Route::middleware(['auth', 'role:admin,master'])->group(function () {
+        Route::get('stored-device', [StoredDeviceController::class, 'index'])->name('panel.stored-device');
         Route::get('ticket/master', [TicketController::class, 'masterTicketIndex'])->name('panel.ticket.master-ticket');
+        Route::get('/letter', [LettersController::class, 'index'])->name('admin.letter.view');
     });
     
     // ====================================================================

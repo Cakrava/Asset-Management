@@ -4,6 +4,8 @@
 
     <!-- [Page specific CSS] start -->
     <link rel="stylesheet" href="{{ asset('assets/css/plugins/dataTables.bootstrap5.min.css') }}">
+    {{-- [TAMBAHAN] CSS untuk intl-tel-input --}}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.13/css/intlTelInput.css">
     <!-- [Page specific CSS] end -->
 
     <div class="pc-container">
@@ -136,7 +138,6 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    {{-- [PERUBAHAN 1] Menambahkan Div Alert yang Tersembunyi --}}
                     <div class="alert alert-warning d-none" role="alert" id="form-validation-alert">
                         <strong>Peringatan:</strong> Harap lengkapi semua data yang wajib diisi.
                     </div>
@@ -163,7 +164,19 @@
                             </div>
                             <div class="col-5 mb-3">
                                 <label for="phone" class="form-label">Phone</label>
-                                <input type="tel" class="form-control form-control-sm" id="phone" name="phone">
+                                {{-- [PERUBAHAN] Input telepon sekarang memiliki lebar 100% untuk mengakomodasi bendera --}}
+                                <input type="tel" class="form-control form-control-sm w-100" id="phone" name="phone">
+                                
+                                {{-- [PERUBAHAN] Div tersembunyi untuk pesan validasi telepon --}}
+                                <div class="alert alert-danger p-2 mt-2 d-none phone-validation-alert" id="phone-validation-alert-invalid" role="alert" style="font-size: 0.8em;">
+                                    Nomor telepon tidak valid.
+                                    <button type="button" class="btn-close btn-sm" onclick="$(this).parent().addClass('d-none')" aria-label="Close" style="float: right;"></button>
+                                </div>
+                                <div class="alert alert-danger p-2 mt-2 d-none phone-validation-alert" id="phone-validation-alert-empty" role="alert" style="font-size: 0.8em;">
+                                    Nomor telepon tidak boleh kosong.
+                                    <button type="button" class="btn-close btn-sm" onclick="$(this).parent().addClass('d-none')" aria-label="Close" style="float: right;"></button>
+                                </div>
+
                             </div>
                         </div>
                         
@@ -234,11 +247,26 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="{{ asset('asset/dist/assets/js/plugins/jquery.dataTables.min.js') }}"></script>
     <script src="{{ asset('asset/dist/assets/js/plugins/dataTables.bootstrap5.min.js') }}"></script>
+    
+    {{-- [TAMBAHAN] JS untuk intl-tel-input --}}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.13/js/intlTelInput.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.13/js/utils.js"></script>
 
 <script>
+    // [PERUBAHAN] Deklarasikan variabel 'iti' di scope yang lebih luas
+    var iti;
+
     $(document).ready(function () {
-        const formInputs = $('#clientForm').find('input, select, textarea, button').not('[type="hidden"], #user_id');
+        const formInputs = $('#clientForm').find('input, select, textarea, button').not('[type="hidden"], #user_id, #phone');
         const alertDiv = $('#form-validation-alert');
+
+        // [PERUBAHAN] Inisialisasi intl-tel-input
+        const phoneInput = document.querySelector("#phone");
+        iti = window.intlTelInput(phoneInput, {
+            initialCountry: "id", // Negara default
+            separateDialCode: true, // Tampilkan kode negara terpisah
+            utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.13/js/utils.js", // WAJIB untuk validasi
+        });
 
         function toggleFormInputs(enable) {
             formInputs.prop('disabled', !enable);
@@ -261,6 +289,10 @@
             $('#user-select-container').show();
             toggleFormInputs(false);
             alertDiv.addClass('d-none'); 
+            $('.phone-validation-alert').addClass('d-none');
+            // Reset input telepon ke default
+            iti.setNumber("");
+            iti.setCountry("id");
         });
 
         $('#user_id').on('change', function() {
@@ -277,13 +309,19 @@
             $('#user_id').prop('disabled', true);
             toggleFormInputs(true);
             alertDiv.addClass('d-none');
+            $('.phone-validation-alert').addClass('d-none');
 
             $.ajax({
                 url: '/client/' + clientId,
                 type: 'GET',
                 success: function (response) {
                     $('#name').val(response.name);
-                    $('#phone').val(response.phone);
+                    // [PERUBAHAN] Set nomor telepon menggunakan metode dari plugin
+                    if(response.phone) {
+                        iti.setNumber(response.phone);
+                    } else {
+                        iti.setNumber("");
+                    }
                     $('#institution').val(response.institution);
                     $('#institution_type').val(response.institution_type);
                     $('#address').val(response.address);
@@ -296,7 +334,6 @@
             });
         });
 
-        // [PERUBAHAN 2] Menambahkan logika validasi
         $('#saveClientBtn').on('click', function (e) {
             e.preventDefault();
             var form = $('#clientForm');
@@ -304,8 +341,8 @@
             var isValid = true;
 
             alertDiv.addClass('d-none');
+            $('.phone-validation-alert').addClass('d-none');
             
-            // Lakukan validasi pada input yang memiliki atribut 'required' dan terlihat
             form.find('input[required]:visible, select[required]:visible').each(function() {
                 if (!$(this).val()) {
                     isValid = false;
@@ -317,7 +354,25 @@
                 return;
             }
 
-            // Jika valid, lanjutkan dengan AJAX
+            // [PERUBAHAN] Logika Validasi Nomor Telepon
+            var phoneNumber = iti.getNumber();
+            var phoneInputVal = $('#phone').val().trim();
+
+            if (phoneInputVal === '') {
+                // Jika input kosong, izinkan (nomor tidak wajib)
+                // Jika wajib, gunakan kode di bawah:
+                // $('#phone-validation-alert-empty').removeClass('d-none');
+                // return;
+            } else if (!iti.isValidNumber()) {
+                // Jika diisi tapi tidak valid
+                $('#phone-validation-alert-invalid').removeClass('d-none');
+                return; // Hentikan proses
+            }
+            
+            // Jika valid (atau kosong), set nilai input ke format internasional
+            $('#phone').val(phoneNumber); 
+
+            // Lanjutkan dengan AJAX
             $.ajax({
                 url: form.attr('action'),
                 type: 'POST',
@@ -342,6 +397,8 @@
             });
         });
 
+        // Sisa kode JavaScript (penghapusan, bulk delete, dll) tetap sama
+        // ... (kode dari sweetalert, bulk delete, dll. ditempatkan di sini) ...
         $('.btn-delete-client').on('click', function (e) {
             e.preventDefault();
             var form = $(this).closest('form');
@@ -373,18 +430,18 @@
                         },
                         error: function(xhr) {
                             if (xhr.status === 400 && xhr.responseJSON && xhr.responseJSON.message) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Gagal!',
-            text: xhr.responseJSON.message
-        });
-    } else {
-        Swal.fire({
-            icon: 'error',
-            title: 'Gagal!',
-            text: 'Terjadi kesalahan saat menghapus data.'
-        });
-    }
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Gagal!',
+                                    text: xhr.responseJSON.message
+                                });
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Gagal!',
+                                    text: 'Terjadi kesalahan saat menghapus data.'
+                                });
+                            }
                         }
                     });
                 }
@@ -452,18 +509,18 @@
                             },
                             error: function (xhr) {
                                 if (xhr.status === 400 && xhr.responseJSON && xhr.responseJSON.message) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Gagal!',
-            text: xhr.responseJSON.message
-        });
-    } else {
-        Swal.fire({
-            icon: 'error',
-            title: 'Gagal!',
-            text: 'Terjadi kesalahan saat menghapus data.'
-        });
-    }
+                                    Swal.fire({
+                                        icon: 'warning',
+                                        title: 'Gagal!',
+                                        text: xhr.responseJSON.message
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Gagal!',
+                                        text: 'Terjadi kesalahan saat menghapus data.'
+                                    });
+                                }
                             }
                         });
                     }
@@ -513,11 +570,14 @@
         .alert-warning {
             position: relative;
         }
-        #btn-bulk-delete-all-duplicates {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            border-radius: 5px;
+
+        /* [TAMBAHAN] Style untuk intl-tel-input agar sesuai dengan template */
+        .iti {
+            width: 100%;
         }
+        .iti__country-list {
+            z-index: 1056; /* Pastikan dropdown muncul di atas modal */
+        }
+      
     </style>
 @endsection

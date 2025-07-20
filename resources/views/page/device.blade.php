@@ -39,13 +39,7 @@
                                 </button>
                             @endif
 
-                            @if (session()->has('warning'))
-                                <div class="alert alert-warning" style="margin-top: 20px; position: relative;">
-                                    <p>⚠️ <strong>Beberapa Data Terlihat Serupa!</strong></p>
-                                    {!! session('warning') !!}
-                                </div>
-                            @endif
-                            {{-- [MODIFIKASI] Notifikasi sukses berbasis session dihapus --}}
+                          
                             @if (session()->has('profile_incomplete'))
                                 <div class="alert alert-primary" style="margin-top: 20px; margin-bottom : -20px">{!! session('profile_incomplete') !!}</div>
                             @endif
@@ -142,16 +136,6 @@
         </div>
     </div>
 
-    <div class="modal fade" id="bulkDeleteDuplicatesConfirmationModal" tabindex="-1" aria-labelledby="bulkDeleteDuplicatesConfirmationModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header"><h5 class="modal-title" id="bulkDeleteDuplicatesConfirmationModalLabel">Konfirmasi Bulk Delete Duplikat</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
-                <div class="modal-body"><p>Apakah Anda yakin ingin menghapus semua perangkat duplikat yang dipilih?</p></div>
-                <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button><button type="button" class="btn btn-danger" id="confirmBulkDeleteDuplicatesBtn">Hapus Semua</button></div>
-            </div>
-        </div>
-    </div>
-    <!-- End Modals -->
 
     <!-- [Page Specific JS] start -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
@@ -221,6 +205,7 @@
                         });
                     },
                     error: function (xhr) { 
+                        $('#deviceModal').modal('hide');
                         Swal.fire({
                             icon: 'error',
                             title: 'Gagal!',

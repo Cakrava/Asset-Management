@@ -95,7 +95,7 @@
                         </li>
 
                         <li class="pc-item">
-                            <a href="{{ route('chat.index') }}" class="pc-link">
+                            <a href="{{ route('chat.index.admin') }}" class="pc-link">
                                 <span class="pc-micon"><i class="ti ti-mail"></i></span>
                                 <span class="pc-mtext">Message</span>
 
