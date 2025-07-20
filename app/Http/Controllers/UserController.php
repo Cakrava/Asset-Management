@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Validation\Rule;
 
 use Illuminate\Support\Str;
 class UserController extends Controller
@@ -39,44 +40,53 @@ class UserController extends Controller
     return view('page.profil', compact('profile', 'email'));
    }
 
+
    public function update(Request $request)
    {
+       // Validator Anda sudah sempurna, tidak perlu diubah.
        $validator = Validator::make($request->all(), [
            'name' => 'nullable|string|max:255',
            'phone' => 'nullable|string|max:20',
            'institution' => 'nullable|string|max:255',
            'institution_type' => 'nullable|string|max:255',
-           'profile_image' => 'nullable|mimes:jpeg,png,jpg,gif,svg|max:2048',
+           'address' => 'nullable|string',
+           'reference' => 'nullable|string',
+           'profile_image' => [
+               'nullable',
+               Rule::when($request->hasFile('profile_image'), [
+                   'mimes:jpeg,png,jpg,gif,svg', 'max:2048'
+               ]),
+               Rule::when(is_string($request->input('profile_image')), [
+                   'string',
+                   function ($attribute, $value, $fail) {
+                       if (!preg_match('/^data:image\/(jpeg|png|jpg);base64,/', $value)) {
+                           $fail('Format gambar dari cropper tidak valid.'); return;
+                       }
+                       $decodedData = base64_decode(last(explode(',', $value)));
+                       if ((strlen($decodedData) / 1024) > 2048) {
+                           $fail('Ukuran gambar tidak boleh lebih dari 2048 KB.');
+                       }
+                   },
+               ]),
+           ],
        ], [
-           'name.required' => 'Nama harus diisi.',
-           'name.string' => 'Nama harus berupa string.',
-           'name.max' => 'Nama tidak boleh lebih dari 255 karakter.',
-           'phone.required' => 'Telepon harus diisi.',
-           'phone.string' => 'Telepon harus berupa string.',
-           'phone.max' => 'Telepon tidak boleh lebih dari 20 karakter.',
-           'institution.required' => 'Instansi harus diisi.',
-           'institution.string' => 'Instansi harus berupa string.',
-           'institution.max' => 'Instansi tidak boleh lebih dari 255 karakter.',
-           'institution_type.required' => 'Tipe Instansi harus diisi.',
-           'institution_type.string' => 'Tipe Instansi harus berupa string.',
-           'institution_type.max' => 'Tipe Instansi tidak boleh lebih dari 255 karakter.',
            'profile_image.mimes' => 'File harus berupa JPEG, PNG, JPG atau SVG.',
            'profile_image.max' => 'Gambar tidak boleh lebih dari 2048 KB.',
+           // ... pesan error lainnya
        ]);
-
+   
        if ($validator->fails()) {
            return Redirect::back()->withErrors($validator)->withInput();
        }
-
+   
        $user = Auth::user();
        if (!$user) {
            return Redirect::back()->with('error', 'User tidak ditemukan.');
        }
-
+   
        $profile = Profile::firstOrNew(['user_id' => $user->id]);
-
-       $oldImagePath = $profile->image;
-
+   
+       // Menetapkan semua nilai TEKS dari request ke model
        $profile->user_id = $user->id;
        $profile->name = $request->name;
        $profile->phone = $request->phone;
@@ -84,53 +94,64 @@ class UserController extends Controller
        $profile->institution_type = $request->institution_type;
        $profile->reference = $request->reference;
        $profile->address = $request->address;
-
+   
+       $newImagePath = null; // Variabel untuk menampung path gambar baru
+       $newImageName = null; // Variabel untuk nama file baru untuk session
+   
+       // --- Logika pemrosesan gambar ---
        if ($request->hasFile('profile_image')) {
+           // Skenario 1: Input adalah FILE
            $image = $request->file('profile_image');
+           $newImageName = time() . '.' . $image->getClientOriginalExtension();
+           $newImagePath = $image->storeAs('profile_images', $newImageName, 'public');
+   
+       } else if ($request->filled('profile_image') && is_string($request->input('profile_image'))) {
+           // Skenario 2: Input adalah STRING BASE64
+           $imageData = $request->input('profile_image');
+           @list($type, $imageData) = explode(';', $imageData);
+           @list(, $imageData) = explode(',', $imageData);
+           $imageData = base64_decode($imageData);
+   
+           $newImageName = Str::random(40) . '.jpg';
+           $newImagePath = 'profile_images/' . $newImageName;
+   
+           Storage::disk('public')->put($newImagePath, $imageData);
+       }
+       
 
-           $imageName = time() . '.' . $image->getClientOriginalExtension();
-           $imagePath = $image->storeAs('profile_images', $imageName, 'public');
-           $profile->image = 'profile_images/' . $imageName;
-
-           Session::put('image_profile_name', $imageName);
-
+       
+       // [LOGIKA TERPUSAT] Jika ada gambar baru yang berhasil diproses
+       if ($newImagePath) {
+           $oldImagePath = $profile->image; // Ambil path lama dari model
+           $profile->image = $newImagePath; // Tetapkan path BARU ke model
+           Session::put('image_profile_name', $newImageName);
+   
+           // Hapus file lama JIKA ada dan BUKAN gambar default
            if ($oldImagePath && $oldImagePath !== 'asset/image/profile.png' && Storage::disk('public')->exists($oldImagePath)) {
                Storage::disk('public')->delete($oldImagePath);
            }
        } else {
            Session::forget('image_profile_name');
        }
-
+   
+       // Bagian ini ke bawah tidak perlu diubah sama sekali
        if ($profile->save()) {
            $profile->fresh();
-
+   
            $requiredFields = [
-               'name',
-               'phone',
-               'institution',
-               'institution_type',
-               'reference',
-               'address',
+               'name', 'phone', 'institution', 'institution_type', 'reference', 'address',
            ];
-
            $totalFields = count($requiredFields);
            $filledFields = 0;
-           $missingFields = [];
-
            foreach ($requiredFields as $field) {
                if (!empty($profile->$field)) {
                    $filledFields++;
-               } else {
-                   $missingFields[] = ucfirst(str_replace('_', ' ', $field));
                }
            }
-
-           $completionPercentage = ($totalFields > 0) ? ($filledFields / $totalFields) * 100 : 0;
-           $completionPercentage = min(100, $completionPercentage);
-           $percentageProfileFix = round($completionPercentage);
-
+           $completionPercentage = ($totalFields > 0) ? round(($filledFields / $totalFields) * 100) : 0;
+   
            if ($completionPercentage < 100) {
-               session()->put('profile_incomplete', 'Kelengkapan profil mu hanya ' . $percentageProfileFix . '%.<br> <a href="' . route('panel.profile') . '" style="color: green;">lengkapi</a>.');
+               session()->put('profile_incomplete', 'Kelengkapan profil mu hanya ' . $completionPercentage . '%.<br> <a href="' . route('panel.profile') . '" style="color: green;">lengkapi</a>.');
            } else {
                session()->forget('profile_incomplete');
            }
@@ -139,6 +160,7 @@ class UserController extends Controller
            return Redirect::back()->with('error', 'Gagal menyimpan profile.');
        }
    }
+   
 
    public function changePassword(Request $request)
     {

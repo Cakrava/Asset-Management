@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Auth; // Import Auth Facade
 use Illuminate\Support\Facades\View; // Import View Facade
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log; // Tambahkan di bagian atas
-
+use Illuminate\Support\Facades\URL;
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -26,6 +26,9 @@ class AppServiceProvider extends ServiceProvider
     
      public function boot(): void
      {
+        if (env('APP_ENV') === 'production') {
+            URL::forceScheme('https');
+        }
         Carbon::setLocale(config('app.locale')); // agar Carbon ikut locale
     setlocale(LC_TIME, 'id_ID.UTF-8');       // agar fungsi date() & strftime() juga ikut
          View::composer(['layout.main', 'layout.sidebar'], function ($view) {

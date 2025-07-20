@@ -1,6 +1,10 @@
 @extends('layout.sidebar')
 
 @section('content')
+    {{-- Dependensi untuk Cropper.js --}}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
     @include('component.loader')
     <script>
         // Optimasi: Pastikan script dijalankan setelah DOM siap
@@ -183,8 +187,9 @@
                                                 <i class="ti ti-camera-plus" style="font-size: 1.5rem;"></i>
                                             </div>
                                         </div>
-                                        <input id="fileInputMobile" type="file" accept="image/*" name="profile_image"
-                                            onchange="previewImageMobile(this)" style="display: none;" />
+                                        {{-- MODIFIKASI INPUT FILE MOBILE --}}
+                                        <input id="fileInputMobile" type="file" accept="image/*" class="profile-image-input" data-preview-element="#imagePreviewMobile" data-hidden-input="#croppedImageInputMobile" style="display: none;" />
+                                        <input type="hidden" name="profile_image" id="croppedImageInputMobile">
                                         <small class="d-block text-muted mt-2">Ketuk gambar untuk mengganti</small>
                                     </div>
 
@@ -631,128 +636,9 @@
                 margin-bottom: 2px;
             }
         </style>
-
-        <script>
-            // Image Preview (Mobile version)
-            function previewImageMobile(input) {
-                if (input.files && input.files[0]) {
-                    var reader = new FileReader();
-                    reader.onload = function (e) {
-                        document.getElementById('imagePreviewMobile').src = e.target.result;
-                    }
-                    reader.readAsDataURL(input.files[0]);
-                }
-            }
-
-            // Password Toggle (Mobile version)
-            document.addEventListener('DOMContentLoaded', function () {
-                const passwordInputGroupsMobile = document.querySelectorAll('.password-input-group-mobile');
-
-                passwordInputGroupsMobile.forEach(inputGroup => {
-                    const passwordInput = inputGroup.querySelector('.password-field-mobile');
-                    const passwordToggle = inputGroup.querySelector('.password-toggle-mobile');
-                    if (passwordInput && passwordToggle) { // Pastikan elemen ada
-                        const eyeIcon = passwordToggle.querySelector('i');
-
-                        passwordToggle.addEventListener('click', function () {
-                            if (passwordInput.type === 'password') {
-                                passwordInput.type = 'text';
-                                eyeIcon.classList.remove('ti-eye-off');
-                                eyeIcon.classList.add('ti-eye');
-                            } else {
-                                passwordInput.type = 'password';
-                                eyeIcon.classList.remove('ti-eye');
-                                eyeIcon.classList.add('ti-eye-off');
-                            }
-                        });
-                    }
-                });
-
-                // Geolocation (Mobile version)
-                const getLocationBtnMobile = document.getElementById('getLocationBtnMobile');
-                if (getLocationBtnMobile) {
-                    const apiKeyMobile = "{{ env('API_GEOCODE') }}";
-                    getLocationBtnMobile.addEventListener('click', function () {
-                        getMyLocationMobile();
-                    });
-
-                    function getMyLocationMobile() {
-                        if (navigator.geolocation) {
-                            navigator.geolocation.getCurrentPosition(function (position) {
-                                const lat = position.coords.latitude;
-                                const lon = position.coords.longitude;
-                                const coordinateString = `${lat}, ${lon}`;
-                                const referenceInput = document.querySelector('input[name="reference"]#referenceMobile');
-                                if (referenceInput) referenceInput.value = coordinateString;
-                                getAddressMobile(lat, lon);
-                            }, function (error) {
-                                alert("Error mendapatkan lokasi: " + error.message);
-                            });
-                        } else {
-                            alert("Geolocation tidak didukung oleh browser ini.");
-                        }
-                    }
-
-                    async function getAddressMobile(lat, lon) {
-                        const url = `https://geocode.maps.co/reverse?lat=${lat}&lon=${lon}&api_key=${apiKeyMobile}`;
-                        const addressInput = document.querySelector('textarea[name="address"]#addressMobile');
-
-                        try {
-                            const response = await fetch(url);
-                            const data = await response.json();
-                            if (data.display_name && addressInput) {
-                                addressInput.value = data.display_name;
-                            } else if (addressInput) {
-                                addressInput.value = "Alamat tidak ditemukan.";
-                            }
-                        } catch (error) {
-                            if (addressInput) addressInput.value = "Error mengambil data alamat.";
-                            console.error("Error fetching address:", error);
-                        }
-                    }
-                }
-
-                // Handle tab activation from URL hash if needed
-                var hash = window.location.hash;
-                if (hash) {
-                    var triggerEl = document.querySelector('.mobile-tabs a[href="' + hash + '-content"]');
-                    if (triggerEl) {
-                        var tab = new bootstrap.Tab(triggerEl);
-                        tab.show();
-                    }
-                    // Fallback for initial load of edit/password if they were active before
-                    // e.g. if error redirects back to #edit-profile
-                    if (hash === '#edit-profile') {
-                        var editTabTrigger = document.querySelector('a#edit-profile-tab');
-                        if (editTabTrigger) new bootstrap.Tab(editTabTrigger).show();
-                    } else if (hash === '#change-password') {
-                        var passTabTrigger = document.querySelector('a#change-password-tab');
-                        if (passTabTrigger) new bootstrap.Tab(passTabTrigger).show();
-                    }
-                }
-
-                // Update hash on tab change
-                var tabElements = document.querySelectorAll('.mobile-tabs a[data-bs-toggle="pill"]');
-                tabElements.forEach(function (tabEl) {
-                    tabEl.addEventListener('shown.bs.tab', function (event) {
-                        // Get the href attribute, remove "-content" to match hash
-                        var newHash = event.target.getAttribute('href').replace('-content', '');
-                        if (history.pushState) {
-                            history.pushState(null, null, newHash);
-                        } else {
-                            window.location.hash = newHash;
-                        }
-                    });
-                });
-
-            });
-        </script>
     </div>
 
     <div id="divProfileDesktop" style="display: none;">
-
-
-
         <div class="pc-container">
             <div class="pc-content">
                 <!-- [ breadcrumb ] start -->
@@ -918,11 +804,6 @@
                                         </div>
                                     </div>
 
-
-
-
-
-
                                     <div class="tab-pane fade" id="edit-profile">
                                         <h5 class="mb-4 font-weight-bold "><i class="fas fa-cogs me-2"></i>
                                             Profile Settings</h5>
@@ -946,8 +827,9 @@
                                                             </p>
                                                         </div>
                                                     </div>
-                                                    <input id="fileInput" type="file" accept="image/*" name="profile_image"
-                                                        onchange="previewImage(this)" style="display: none;" />
+                                                    {{-- MODIFIKASI INPUT FILE DESKTOP --}}
+                                                    <input id="fileInput" type="file" accept="image/*" class="profile-image-input" data-preview-element="#imagePreview" data-hidden-input="#croppedImageInput" style="display: none;" />
+                                                    <input type="hidden" name="profile_image" id="croppedImageInput">
                                                 </div>
                                                 <div class="col-md-9">
                                                     <div class="row gy-3">
@@ -1017,7 +899,7 @@
 
                                             <div class="d-flex justify-content-end mt-3">
                                                 <button type="button" class="btn btn-outline-primary me-2"
-                                                    id="getLocationBtn">
+                                                    id="getLocationBtnDesktop">
                                                     <i class="fas fa-location-crosshairs"></i> Get Location
                                                 </button>
                                                 <button type="submit" class="btn btn-primary">
@@ -1027,87 +909,18 @@
                                         </form>
                                     </div>
 
-
                                     <style>
-                                        .text-primary {
-                                            color: #0EA2BC;
-                                            /* Warna biru Bootstrap primary */
-                                        }
-
-                                        .border-primary {
-                                            border-color: #0EA2BC;
-                                        }
-
-                                        .bg-primary {
-                                            background-color: #0EA2BC;
-                                        }
-
-                                        .btn-primary {
-                                            background-color: #0EA2BC;
-                                            color: white;
-                                            border-color: #0EA2BC;
-                                        }
-
-                                        .btn-primary:hover {
-                                            background-color: #0EA2BC;
-                                            /* Warna biru lebih gelap saat hover */
-                                            border-color: #0EA2BC;
-                                        }
-
-                                        .btn-outline-primary {
-                                            color: #0EA2BC;
-                                            border-color: #0EA2BC;
-                                        }
-
-                                        .btn-outline-primary:hover {
-                                            background-color: #e0f2ff;
-                                            /* Warna latar belakang lebih terang saat hover */
-                                        }
-
-                                        /* Style tambahan untuk overlay */
-                                        .profile-image-container {
-                                            position: relative;
-                                            display: inline-block;
-                                            /* Penting agar overlay bekerja dengan benar */
-                                        }
-
-                                        .profile-overlay {
-                                            position: absolute;
-                                            top: 0;
-                                            left: 0;
-                                            width: 100%;
-                                            height: 100%;
-                                            border-radius: 50%;
-                                            /* Agar overlay berbentuk lingkaran */
-                                            background-color: rgba(0, 0, 0, 0.5);
-                                            /* Warna overlay hitam semi-transparan */
-                                            display: flex;
-                                            justify-content: center;
-                                            align-items: center;
-                                            opacity: 0;
-                                            /* Awalnya tidak terlihat */
-                                            transition: opacity 0.3s ease;
-                                            /* Animasi transisi opacity */
-                                            cursor: pointer;
-                                            /* Tambahkan cursor pointer agar jelas bisa diklik */
-                                        }
-
-                                        .profile-image-container:hover .profile-overlay {
-                                            opacity: 1;
-                                            /* Tampilkan overlay saat hover */
-                                        }
-
-                                        .profile-overlay-text {
-                                            color: white;
-                                            font-weight: bold;
-                                            font-size: 0.9em;
-                                            /* Ukuran teks dikecilkan menjadi 0.9em (dari 1.2em) */
-                                            text-align: center;
-                                            display: flex;
-                                            /* Agar icon dan text sejajar horizontal */
-                                            align-items: center;
-                                            /* Agar icon dan text sejajar vertical ditengah */
-                                        }
+                                        .text-primary { color: #0EA2BC; }
+                                        .border-primary { border-color: #0EA2BC; }
+                                        .bg-primary { background-color: #0EA2BC; }
+                                        .btn-primary { background-color: #0EA2BC; color: white; border-color: #0EA2BC; }
+                                        .btn-primary:hover { background-color: #0EA2BC; border-color: #0EA2BC; }
+                                        .btn-outline-primary { color: #0EA2BC; border-color: #0EA2BC; }
+                                        .btn-outline-primary:hover { background-color: #e0f2ff; }
+                                        .profile-image-container { position: relative; display: inline-block; }
+                                        .profile-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; background-color: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease; cursor: pointer; }
+                                        .profile-image-container:hover .profile-overlay { opacity: 1; }
+                                        .profile-overlay-text { color: white; font-weight: bold; font-size: 0.9em; text-align: center; display: flex; align-items: center; }
                                     </style>
 
                                     <div class="tab-pane fade" id="change-password">
@@ -1118,49 +931,28 @@
 
                                         <form action="{{ route('panel.profile.changePassword') }}" method="POST">
                                             @csrf
-                                            <div class="mb-2"> {{-- Margin bawah diperkecil --}}
-                                                <label for="current_password" class="form-label small text-muted">Current
-                                                    Password</label> {{-- Label dikecilkan dan warna diubah --}}
+                                            <div class="mb-2">
+                                                <label for="current_password" class="form-label small text-muted">Current Password</label>
                                                 <div class="password-input-group">
-                                                    <input type="password"
-                                                        class="form-control form-control-sm password-field" {{--
-                                                        form-control-sm ditambahkan --}} id="current_password"
-                                                        name="current_password">
-                                                    <span class="password-toggle-icon password-toggle">
-                                                        <i class="ti ti-eye-off"></i>
-                                                    </span>
+                                                    <input type="password" class="form-control form-control-sm password-field" id="current_password" name="current_password">
+                                                    <span class="password-toggle-icon password-toggle"><i class="ti ti-eye-off"></i></span>
                                                 </div>
                                             </div>
-                                            <div class="mb-2"> {{-- Margin bawah diperkecil --}}
-                                                <label for="new_password" class="form-label small text-muted">New
-                                                    Password</label> {{-- Label dikecilkan dan warna diubah --}}
+                                            <div class="mb-2">
+                                                <label for="new_password" class="form-label small text-muted">New Password</label>
                                                 <div class="password-input-group">
-                                                    <input type="password"
-                                                        class="form-control form-control-sm password-field" {{--
-                                                        form-control-sm ditambahkan --}} id="new_password"
-                                                        name="new_password">
-                                                    <span class="password-toggle-icon password-toggle">
-                                                        <i class="ti ti-eye-off"></i>
-                                                    </span>
+                                                    <input type="password" class="form-control form-control-sm password-field" id="new_password" name="new_password">
+                                                    <span class="password-toggle-icon password-toggle"><i class="ti ti-eye-off"></i></span>
                                                 </div>
                                             </div>
                                             <div class="mb-3">
-                                                <label for="confirm_password" class="form-label small text-muted">Confirm
-                                                    New
-                                                    Password</label> {{-- Label dikecilkan dan warna diubah --}}
+                                                <label for="confirm_password" class="form-label small text-muted">Confirm New Password</label>
                                                 <div class="password-input-group">
-                                                    <input type="password"
-                                                        class="form-control form-control-sm password-field" {{--
-                                                        form-control-sm ditambahkan --}} id="confirm_password"
-                                                        name="confirm_password">
-                                                    <span class="password-toggle-icon password-toggle">
-                                                        <i class="ti ti-eye-off"></i>
-                                                    </span>
+                                                    <input type="password" class="form-control form-control-sm password-field" id="confirm_password" name="confirm_password">
+                                                    <span class="password-toggle-icon password-toggle"><i class="ti ti-eye-off"></i></span>
                                                 </div>
                                             </div>
-                                            <button type="submit" class="btn btn-outline-primary btn-sm">Change
-                                                Password</button>
-                                            {{-- btn-outline-primary dan btn-sm digunakan --}}
+                                            <button type="submit" class="btn btn-outline-primary btn-sm">Change Password</button>
                                         </form>
                                     </div>
                                 </div>
@@ -1173,119 +965,241 @@
         </div>
 
         <style>
-            .card-body {
-                padding-left: 5px;
-                /* Sesuaikan padding kiri card-body agar konten di dalamnya tetap punya jarak */
-                padding-right: 15px;
-                /* Sesuaikan padding kanan card-body agar konten di dalamnya tetap punya jarak */
-            }
-
-            .card-profile {
-                border-radius: 15px;
-                overflow: hidden;
-            }
-
-            .profile-menu .list-group-item.profile-menu-item {
-                border: none;
-                background-color: transparent;
-            }
-
-            .profile-menu .nav-link {
-                color: #333;
-                font-size: 0.9rem;
-                padding: 0.5rem 1.25rem;
-                margin-top: -10px;
-                margin-bottom: -10px;
-                border-radius: 0.25rem;
-                transition: background-color 0.3s ease;
-            }
-
-            .profile-menu .nav-link:hover,
-            .profile-menu .nav-link.active {
-                background-color: #e9ecef;
-                color: #0EA2BC;
-                /* Warna biru untuk menu aktif/hover */
-            }
-
-            .profile-content {
-                padding-left: 10px;
-            }
-
-            .profile-content h5 {
-                color: #495057;
-            }
-
-            /* CSS for Password Toggle in Tab Content (General) */
-            .tab-pane.fade .password-input-group {
-                position: relative;
-            }
-
-            .tab-pane.fade .password-input-group .form-control.password-field {
-                /* Target input dengan class password-field */
-                padding-right: 30px;
-            }
-
-            .tab-pane.fade .password-toggle-icon.password-toggle {
-                /* Target icon dengan class password-toggle */
-                position: absolute;
-                top: 50%;
-                right: 5px;
-                transform: translateY(-50%);
-                cursor: pointer;
-                opacity: 0.7;
-            }
-
-            .tab-pane.fade .password-toggle-icon.password-toggle:hover {
-                opacity: 1;
-            }
-
-            .tab-pane.fade #edit-profile .row.mb-4 {
-                display: flex;
-                align-items: center;
-            }
-
-            .tab-pane.fade #edit-profile .col-md-4 {
-                /* Tetap style kolom gambar */
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                text-align: center;
-            }
-
-            .tab-pane.fade #edit-profile .col-md-8 {
-                /* Style kolom info (nama, email) - Padding kanan diubah */
-                padding-right: 20px;
-                /* Ganti padding-left jadi padding-right */
-                padding-left: 0;
-                /* Hilangkan padding kiri jika ada */
-                text-align: right;
-                /* Optional: Jika ingin teks rata kanan di kolom info */
-            }
-
-            .profile-image {
-                opacity: 1;
-                /* Opacity awal (penuh) */
-                transition: opacity 0.3s ease;
-                /* Transisi untuk efek smooth */
-            }
-
-            .profile-image:hover {
-                opacity: 0.8;
-                border-color: #0EA2BC;
-                transform: scale(1.05);
-                transition: transform 0.3s ease, opacity 0.3s ease;
-            }
+            .card-body { padding-left: 5px; padding-right: 15px; }
+            .card-profile { border-radius: 15px; overflow: hidden; }
+            .profile-menu .list-group-item.profile-menu-item { border: none; background-color: transparent; }
+            .profile-menu .nav-link { color: #333; font-size: 0.9rem; padding: 0.5rem 1.25rem; margin-top: -10px; margin-bottom: -10px; border-radius: 0.25rem; transition: background-color 0.3s ease; }
+            .profile-menu .nav-link:hover, .profile-menu .nav-link.active { background-color: #e9ecef; color: #0EA2BC; }
+            .profile-content { padding-left: 10px; }
+            .profile-content h5 { color: #495057; }
+            .tab-pane.fade .password-input-group { position: relative; }
+            .tab-pane.fade .password-input-group .form-control.password-field { padding-right: 30px; }
+            .tab-pane.fade .password-toggle-icon.password-toggle { position: absolute; top: 50%; right: 5px; transform: translateY(-50%); cursor: pointer; opacity: 0.7; }
+            .tab-pane.fade .password-toggle-icon.password-toggle:hover { opacity: 1; }
+            .tab-pane.fade #edit-profile .row.mb-4 { display: flex; align-items: center; }
+            .tab-pane.fade #edit-profile .col-md-4 { display: flex; flex-direction: column; align-items: center; text-align: center; }
+            .tab-pane.fade #edit-profile .col-md-8 { padding-right: 20px; padding-left: 0; text-align: right; }
+            .profile-image { opacity: 1; transition: opacity 0.3s ease; }
+            .profile-image:hover { opacity: 0.8; border-color: #0EA2BC; transform: scale(1.05); transition: transform 0.3s ease, opacity 0.3s ease; }
         </style>
+    </div>
 
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                const passwordInputGroups = document.querySelectorAll('.password-input-group'); // Select all input groups
+  <!-- [MODIFIKASI] Modal Cropping Gambar yang Ditingkatkan -->
+<!-- Alternatif 1: Toolbar Ganda -->
+<div class="modal fade" id="cropImageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <div class="btn-toolbar w-100" role="toolbar">
+                    <div class="btn-group btn-group-sm me-2"><button class="btn btn-light" id="rotateLeft" title="Putar Kiri"><i class="ti ti-rotate-2"></i></button><button class="btn btn-light" id="rotateRight" title="Putar Kanan"><i class="ti ti-rotate-clockwise-2"></i></button></div>
+                    <div class="btn-group btn-group-sm me-2"><button class="btn btn-light" id="flipHorizontal" title="Balik Horizontal"><i class="ti ti-arrows-horizontal"></i></button><button class="btn btn-light" id="flipVertical" title="Balik Vertikal"><i class="ti ti-arrows-vertical"></i></button></div>
+                    <div class="btn-group btn-group-sm"><button class="btn btn-light" id="zoomIn" title="Perbesar"><i class="ti ti-zoom-in"></i></button><button class="btn btn-light" id="zoomOut" title="Perkecil"><i class="ti ti-zoom-out"></i></button></div>
+                    <div class="ms-auto"><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="img-container mb-3" style="height: 400px;"><img id="imageToCrop" style="max-height: 100%;"></div>
+                <div class="row gx-3">
+                    <div class="col"><label class="small">Brightness</label><input type="range" class="form-range" id="brightness" value="100" min="0" max="200" data-filter="brightness"></div>
+                    <div class="col"><label class="small">Contrast</label><input type="range" class="form-range" id="contrast" value="100" min="0" max="200" data-filter="contrast"></div>
+                    <div class="col"><label class="small">Saturate</label><input type="range" class="form-range" id="saturate" value="100" min="0" max="200" data-filter="saturate"></div>
+                    <div class="col"><label class="small">Grayscale</label><input type="range" class="form-range" id="grayscale" value="0" min="0" max="100" data-filter="grayscale"></div>
+                    <div class="col"><label class="small">Hue</label><input type="range" class="form-range" id="hue-rotate" value="0" min="0" max="360" data-filter="hue-rotate"></div>
+                </div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-light" id="resetFilters">Reset</button><div class="flex-grow-1"></div><button class="btn btn-secondary" data-bs-dismiss="modal">Batal</button><button class="btn btn-primary" id="cropAndSaveButton">Simpan</button></div>
+        </div>
+    </div>
+</div>
+    {{-- Kumpulan Semua Script --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+        
+            const cropImageModalElement = document.getElementById('cropImageModal');
+    if (cropImageModalElement) {
+        const cropImageModal = new bootstrap.Modal(cropImageModalElement);
+        const imageToCrop = document.getElementById('imageToCrop');
+        const cropAndSaveButton = document.getElementById('cropAndSaveButton');
+        let cropper;
+        let currentPreviewElement, currentHiddenInput;
 
-                passwordInputGroups.forEach(inputGroup => { // Loop through each input group
-                    const passwordInput = inputGroup.querySelector('.password-field'); // Cari input di dalam group
-                    const passwordToggle = inputGroup.querySelector('.password-toggle'); // Cari toggle di dalam group
+        // ==========================================================
+        // 1. DEFINISI SEMUA ELEMEN KONTROL
+        // ==========================================================
+        // Kontrol Aksi Dasar
+        const rotateLeftBtn = document.getElementById('rotateLeft');
+        const rotateRightBtn = document.getElementById('rotateRight');
+        const flipHorizontalBtn = document.getElementById('flipHorizontal');
+        const flipVerticalBtn = document.getElementById('flipVertical');
+        
+        // Kontrol Zoom
+        const zoomInBtn = document.getElementById('zoomIn');
+        const zoomOutBtn = document.getElementById('zoomOut');
+
+        // Kontrol Filter (Slider)
+        const filterSliders = document.querySelectorAll('.form-range');
+        
+        // Kontrol Reset
+        const resetBtn = document.getElementById('resetFilters');
+
+        // Objek untuk menyimpan state filter saat ini
+        let currentFilters = { 
+            brightness: 100, 
+            contrast: 100, 
+            grayscale: 0, 
+            saturate: 100, 
+            'hue-rotate': 0 
+        };
+
+
+        // ==========================================================
+        // 2. LOGIKA PEMILIHAN GAMBAR (Klik & Drag-Drop)
+        // ==========================================================
+        function handleFile(file) {
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imageToCrop.src = e.target.result;
+                    cropImageModal.show();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Event listener untuk input file (klik)
+        document.querySelectorAll('.profile-image-input').forEach(input => {
+            input.addEventListener('change', (event) => {
+                currentPreviewElement = document.querySelector(event.target.dataset.previewElement);
+                currentHiddenInput = document.querySelector(event.target.dataset.hiddenInput);
+                if (event.target.files.length > 0) {
+                    handleFile(event.target.files[0]);
+                }
+                event.target.value = ''; // Selalu reset input file
+            });
+        });
+
+        // (Opsional) Event listener untuk Drag and Drop
+        document.querySelectorAll('.drop-zone').forEach(zone => {
+            zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+            zone.addEventListener('dragleave', e => { e.preventDefault(); zone.classList.remove('drag-over'); });
+            zone.addEventListener('drop', e => {
+                e.preventDefault();
+                zone.classList.remove('drag-over');
+                currentPreviewElement = zone;
+                currentHiddenInput = document.querySelector(zone.dataset.hiddenInput || (zone.id === 'imagePreview' ? '#croppedImageInput' : '#croppedImageInputMobile'));
+                if (e.dataTransfer.files.length > 0) {
+                    handleFile(e.dataTransfer.files[0]);
+                }
+            });
+        });
+
+
+        // ==========================================================
+        // 3. LOGIKA MODAL DAN INISIALISASI CROPPER
+        // ==========================================================
+        cropImageModalElement.addEventListener('shown.bs.modal', () => {
+            cropper = new Cropper(imageToCrop, {
+                aspectRatio: 1, viewMode: 1, autoCropArea: 0.9,
+                responsive: true, background: false, guides: false, center: false,
+            });
+        });
+
+        cropImageModalElement.addEventListener('hidden.bs.modal', () => {
+            if (cropper) {
+                cropper.destroy();
+                cropper = null;
+            }
+            // Reset filter
+            const cropperImage = cropImageModalElement.querySelector('.cropper-view-box img');
+            if(cropperImage) cropperImage.style.filter = '';
+            // Reset slider
+            resetBtn.click();
+        });
+
+
+        // ==========================================================
+        // 4. SEMUA EVENT LISTENER UNTUK KONTROL EDITOR
+        // ==========================================================
+        
+        // [FIX] KONTROL DASAR (Rotate, Flip, Zoom)
+        if(rotateLeftBtn) rotateLeftBtn.addEventListener('click', () => cropper && cropper.rotate(-90));
+        if(rotateRightBtn) rotateRightBtn.addEventListener('click', () => cropper && cropper.rotate(90));
+        if(flipHorizontalBtn) flipHorizontalBtn.addEventListener('click', () => cropper && cropper.scaleX(-cropper.getData().scaleX || -1));
+        if(flipVerticalBtn) flipVerticalBtn.addEventListener('click', () => cropper && cropper.scaleY(-cropper.getData().scaleY || -1));
+        if(zoomInBtn) zoomInBtn.addEventListener('click', () => cropper && cropper.zoom(0.1));
+        if(zoomOutBtn) zoomOutBtn.addEventListener('click', () => cropper && cropper.zoom(-0.1));
+        
+        // KONTROL FILTER (Slider)
+        function applyCssFilters() {
+            const cropperImage = cropImageModalElement.querySelector('.cropper-view-box img');
+            if(cropperImage) {
+                const filterString = Object.entries(currentFilters).map(([key, value]) => {
+                    const unit = key === 'hue-rotate' ? 'deg' : '%';
+                    return `${key}(${value}${unit})`;
+                }).join(' ');
+                cropperImage.style.filter = filterString;
+            }
+        }
+        
+        filterSliders.forEach(slider => {
+            slider.addEventListener('input', (e) => {
+                currentFilters[e.target.dataset.filter] = e.target.value;
+                applyCssFilters();
+            });
+        });
+
+        // KONTROL RESET
+        if(resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                if(cropper) cropper.reset();
+                currentFilters = { brightness: 100, contrast: 100, grayscale: 0, saturate: 100, 'hue-rotate': 0 };
+                applyCssFilters();
+                filterSliders.forEach(slider => {
+                    slider.value = currentFilters[slider.dataset.filter];
+                });
+            });
+        }
+        
+        // ==========================================================
+        // 5. LOGIKA SIMPAN (Terapkan semua efek)
+        // ==========================================================
+        if(cropAndSaveButton) {
+            cropAndSaveButton.addEventListener('click', () => {
+                if (!cropper) return;
+                
+                const finalCanvas = document.createElement('canvas');
+                const ctx = finalCanvas.getContext('2d');
+                const croppedCanvas = cropper.getCroppedCanvas({
+                    width: 1024, height: 1024, imageSmoothingQuality: 'high'
+                });
+
+                finalCanvas.width = croppedCanvas.width;
+                finalCanvas.height = croppedCanvas.height;
+
+                const filterString = Object.entries(currentFilters).map(([key, value]) => {
+                    const unit = key === 'hue-rotate' ? 'deg' : '%';
+                    return `${key}(${value}${unit})`;
+                }).join(' ');
+                
+                ctx.filter = filterString;
+                ctx.drawImage(croppedCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
+                
+                const finalDataUrl = finalCanvas.toDataURL('image/jpeg', 0.9);
+                
+                currentPreviewElement.src = finalDataUrl;
+                currentHiddenInput.value = finalDataUrl;
+                
+                cropImageModal.hide();
+            });
+        }
+    }
+            // --- [LAMA] Logika untuk Toggle Password ---
+            const passwordInputGroups = document.querySelectorAll('.password-input-group, .password-input-group-mobile');
+            passwordInputGroups.forEach(inputGroup => {
+                const passwordInput = inputGroup.querySelector('.password-field, .password-field-mobile');
+                const passwordToggle = inputGroup.querySelector('.password-toggle, .password-toggle-mobile');
+                if (passwordInput && passwordToggle) {
                     const eyeIcon = passwordToggle.querySelector('i');
-
                     passwordToggle.addEventListener('click', function () {
                         if (passwordInput.type === 'password') {
                             passwordInput.type = 'text';
@@ -1297,66 +1211,80 @@
                             eyeIcon.classList.add('ti-eye-off');
                         }
                     });
+                }
+            });
+
+            // --- [LAMA] Logika untuk Geolocation (Desktop) ---
+            const getLocationBtnDesktop = document.getElementById('getLocationBtnDesktop');
+            if (getLocationBtnDesktop) {
+                const apiKey = "{{ env('API_GEOCODE') }}";
+                getLocationBtnDesktop.addEventListener('click', function () {
+                    if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(function (position) {
+                            const lat = position.coords.latitude;
+                            const lon = position.coords.longitude;
+                            document.getElementById('reference').value = `${lat}, ${lon}`;
+                            fetch(`https://geocode.maps.co/reverse?lat=${lat}&lon=${lon}&api_key=${apiKey}`)
+                                .then(response => response.json())
+                                .then(data => {
+                                    if(data.display_name) {
+                                        document.querySelector('input[name="address"]').value = data.display_name;
+                                    }
+                                })
+                                .catch(error => console.error("Error fetching address:", error));
+                        }, (error) => alert("Error mendapatkan lokasi: " + error.message));
+                    } else {
+                        alert("Geolocation tidak didukung oleh browser ini.");
+                    }
+                });
+            }
+
+            // --- [LAMA] Logika untuk Geolocation (Mobile) ---
+            const getLocationBtnMobile = document.getElementById('getLocationBtnMobile');
+            if (getLocationBtnMobile) {
+                const apiKeyMobile = "{{ env('API_GEOCODE') }}";
+                getLocationBtnMobile.addEventListener('click', function () {
+                    if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(function (position) {
+                            const lat = position.coords.latitude;
+                            const lon = position.coords.longitude;
+                            document.getElementById('referenceMobile').value = `${lat}, ${lon}`;
+                            fetch(`https://geocode.maps.co/reverse?lat=${lat}&lon=${lon}&api_key=${apiKeyMobile}`)
+                                .then(response => response.json())
+                                .then(data => {
+                                    if(data.display_name) {
+                                        document.getElementById('addressMobile').value = data.display_name;
+                                    }
+                                })
+                                .catch(error => console.error("Error fetching address:", error));
+                        }, (error) => alert("Error mendapatkan lokasi: " + error.message));
+                    } else {
+                        alert("Geolocation tidak didukung oleh browser ini.");
+                    }
+                });
+            }
+
+            // --- [LAMA] Logika untuk Navigasi Tab ---
+            var hash = window.location.hash;
+            if (hash) {
+                var triggerEl = document.querySelector('.nav-link[href="' + hash + '"], .mobile-tabs a[href="' + hash + '-content"]');
+                if (triggerEl) {
+                    var tab = new bootstrap.Tab(triggerEl);
+                    tab.show();
+                }
+            }
+            var tabElements = document.querySelectorAll('a[data-bs-toggle="tab"], a[data-bs-toggle="pill"]');
+            tabElements.forEach(function (tabEl) {
+                tabEl.addEventListener('shown.bs.tab', function (event) {
+                    var newHash = event.target.getAttribute('href').replace('-content', '');
+                    if (history.pushState) {
+                        history.pushState(null, null, newHash);
+                    } else {
+                        window.location.hash = newHash;
+                    }
                 });
             });
-        </script>
-        <script>
-            const apiKey = "{{ env('API_GEOCODE') }}";
 
-            document.getElementById('getLocationBtn').addEventListener('click', function () {
-                getMyLocation();
-            });
-
-            function getMyLocation() {
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(function (position) {
-                        const lat = position.coords.latitude;
-                        const lon = position.coords.longitude;
-
-                        // Isi input reference dengan koordinat
-                        const coordinateString = `${lat}, ${lon}`;
-                        const referenceInput = document.getElementById('reference');
-    if (referenceInput) referenceInput.value = coordinateString;
-
-    getAddress(lat, lon);
-                    }, function (error) {
-                        alert("Error getting location: " + error.message);
-                    });
-                } else {
-                    alert("Geolocation is not supported by this browser.");
-                }
-            }
-
-            async function getAddress(lat, lon) {
-                const url = `https://geocode.maps.co/reverse?lat=${lat}&lon=${lon}&api_key=${apiKey}`;
-
-                try {
-                    const response = await fetch(url);
-                    const data = await response.json();
-
-                    if (data.display_name) {
-                        document.querySelector('input[name="address"]').value = data.display_name;
-                    } else {
-                        document.querySelector('input[name="address"]').value = "Address not found.";
-                    }
-                } catch (error) {
-                    document.querySelector('input[name="address"]').value = "Error fetching address data.";
-                    console.error("Error fetching address:", error);
-                }
-            }
-
-        </script>
-        <script>
-            function previewImage(input) {
-                if (input.files && input.files[0]) {
-                    var reader = new FileReader();
-                    reader.onload = function (e) {
-                        document.getElementById('imagePreview').src = e.target.result;
-                    }
-                    reader.readAsDataURL(input.files[0]);
-                }
-            }
-        </script>
-
-    </div>
+        });
+    </script>
 @endsection
